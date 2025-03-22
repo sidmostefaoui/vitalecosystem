@@ -83,7 +83,8 @@ function AppContent() {
           <Route path="/régime-forfait" element={<SubMenu title="Régime Forfait" />} />
           <Route path="/régime-réel" element={<SubMenu title="Régime Réel" />} />
           <Route path="/inventaire" element={<SubMenu title="Inventaire" />} />
-          <Route path="/fournisseurs" element={<SubMenu title="Fournisseurs" />} />
+          <Route path="/achats" element={<SubMenu title="Achats" />} />
+          <Route path="/agents" element={<SubMenu title="Agents" />} />
           <Route path="/" element={<Navigate replace to="/dashboard" />} />
         </Routes>
       </Container>

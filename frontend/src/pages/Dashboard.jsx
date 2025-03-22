@@ -12,8 +12,9 @@ import {
 import {
   AssignmentTurnedIn as RegimeForfaitIcon,
   BarChart as RegimeReelIcon,
-  Inventory as InventaireIcon,
-  LocalShipping as FournisseursIcon,
+  Warehouse as InventaireIcon,
+  ShoppingCart as AchatsIcon,
+  Engineering as AgentsIcon,
 } from '@mui/icons-material';
 
 /**
@@ -86,9 +87,14 @@ const Dashboard = () => {
       onClick: () => handleCardClick('Inventaire'),
     },
     {
-      title: 'Fournisseurs',
-      icon: <FournisseursIcon sx={{ fontSize: 60 }} />,
-      onClick: () => handleCardClick('Fournisseurs'),
+      title: 'Achats',
+      icon: <AchatsIcon sx={{ fontSize: 60 }} />,
+      onClick: () => handleCardClick('Achats'),
+    },
+    {
+      title: 'Agents',
+      icon: <AgentsIcon sx={{ fontSize: 60 }} />,
+      onClick: () => handleCardClick('Agents'),
     },
   ];
 

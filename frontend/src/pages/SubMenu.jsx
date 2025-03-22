@@ -17,6 +17,10 @@ import {
   People as PeopleIcon,
   Payment as PaymentIcon,
   LocalShipping as ShippingIcon,
+  Storefront as FournisseursIcon,
+  Receipt as BonsAchatsIcon,
+  Engineering as EmployeIcon,
+  Assignment as ContratIcon,
 } from '@mui/icons-material';
 
 /**
@@ -38,52 +42,70 @@ const SubMenu = ({ title }) => {
       {
         title: 'Clients',
         icon: <PeopleIcon sx={{ fontSize: 60 }} />,
-        description: 'Gérer les clients',
         onClick: () => navigate('/clients')
       },
       {
         title: 'Versements',
         icon: <PaymentIcon sx={{ fontSize: 60 }} />,
-        description: 'Gérer les versements',
       },
       {
         title: 'Bons de livraisons',
         icon: <ShippingIcon sx={{ fontSize: 60 }} />,
-        description: 'Gérer les bons de livraisons',
       },
     ];
-  } else {
+  } 
+  // Specific submenu for Achats section with Fournisseurs and Bons d'achats
+  else if (title === "Achats") {
+    menuItems = [
+      {
+        title: 'Fournisseurs',
+        icon: <FournisseursIcon sx={{ fontSize: 60 }} />,
+      },
+      {
+        title: 'Bons d\'achats',
+        icon: <BonsAchatsIcon sx={{ fontSize: 60 }} />,
+      },
+    ];
+  }
+  // Specific submenu for Agents section with Employés and Contrats
+  else if (title === "Agents") {
+    menuItems = [
+      {
+        title: 'Employés',
+        icon: <EmployeIcon sx={{ fontSize: 60 }} />,
+      },
+      {
+        title: 'Contrats',
+        icon: <ContratIcon sx={{ fontSize: 60 }} />,
+      },
+    ];
+  }
+  else {
     // Default submenu options for other sections
     menuItems = [
       {
         title: 'Gérer',
         icon: <ListIcon sx={{ fontSize: 60 }} />,
-        description: 'Afficher et modifier',
       },
       {
         title: 'Ajouter',
         icon: <AddIcon sx={{ fontSize: 60 }} />,
-        description: 'Créer une nouvelle entrée',
       },
       {
         title: 'Rapports',
         icon: <ChartIcon sx={{ fontSize: 60 }} />,
-        description: 'Générer des statistiques',
       },
       {
         title: 'Historique',
         icon: <HistoryIcon sx={{ fontSize: 60 }} />,
-        description: 'Consulter l\'historique',
       },
       {
         title: 'Documents',
         icon: <ArticleIcon sx={{ fontSize: 60 }} />,
-        description: 'Gérer les documents',
       },
       {
         title: 'Paramètres',
         icon: <SettingsIcon sx={{ fontSize: 60 }} />,
-        description: 'Configurer les options',
       },
     ];
   }
@@ -120,13 +142,10 @@ const SubMenu = ({ title }) => {
                 <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                   {item.icon}
                 </Box>
-                {/* Title and description */}
+                {/* Title only */}
                 <Box>
-                  <Typography variant="h5" gutterBottom>
+                  <Typography variant="h5">
                     {item.title}
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    {item.description}
                   </Typography>
                 </Box>
               </Stack>
