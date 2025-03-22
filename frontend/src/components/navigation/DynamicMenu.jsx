@@ -10,8 +10,6 @@ import {
 import {
   Dashboard as DashboardIcon,
   People as PeopleIcon,
-  Receipt as ReceiptIcon,
-  CalendarToday as CalendarIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -21,8 +19,6 @@ const DynamicMenu = ({ onClose }) => {
   const menuItems = [
     { text: 'Tableau de bord', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Clients', icon: <PeopleIcon />, path: '/clients' },
-    { text: 'Factures', icon: <ReceiptIcon />, path: '/factures' },
-    { text: 'Planning', icon: <CalendarIcon />, path: '/planning' },
   ];
 
   const handleNavigation = (path) => {
