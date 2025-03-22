@@ -21,6 +21,9 @@ import {
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import { utils as xlsxUtils, read as xlsxRead, writeFile as xlsxWriteFile } from 'xlsx';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import { fr } from 'date-fns/locale';
 
 const ClientList = () => {
   const navigate = useNavigate();
@@ -30,51 +33,51 @@ const ClientList = () => {
   const [isAddingClient, setIsAddingClient] = useState(false);
   const [newClient, setNewClient] = useState({
     nom: '',
-    prenom: '',
-    email: '',
-    entreprise: '',
-    crnc: ''
+    specialite: '',
+    mode_passage: '',
+    dernier_passage: null,
+    agent: '',
+    tel: '',
+    adresse: '',
+    montant_mensuel: '',
+    date_recrutement: null
   });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const columns = [
-    { field: 'id', headerName: 'ID', width: 70 },
-    { field: 'nom', headerName: 'Nom', width: 130 },
-    { field: 'prenom', headerName: 'Prénom', width: 130 },
-    { field: 'email', headerName: 'Email', width: 200 },
-    { field: 'entreprise', headerName: 'Entreprise', width: 200 },
-    { field: 'crnc', headerName: 'CRNC', width: 130 },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 200,
-      sortable: false,
-      renderCell: (params) => (
-        <Stack direction="row" spacing={1}>
-          <IconButton
-            color="primary"
-            size="small"
-            onClick={() => navigate(`/clients/${params.row.id}`)}
-          >
-            <VisibilityIcon />
-          </IconButton>
-          <IconButton
-            color="primary"
-            size="small"
-            onClick={() => navigate(`/clients/${params.row.id}`)}
-          >
-            <EditIcon />
-          </IconButton>
-          <IconButton
-            color="error"
-            size="small"
-            onClick={() => handleDeleteClient(params.row.id)}
-          >
-            <DeleteIcon />
-          </IconButton>
-        </Stack>
-      ),
+    { field: 'nom', headerName: 'Nom', width: 150, resizable: true },
+    { field: 'specialite', headerName: 'Spécialité', width: 130, resizable: true },
+    { 
+      field: 'mode_passage', 
+      headerName: 'Mode de passage', 
+      width: 130,
+      resizable: true,
+      valueFormatter: (params) => `${params.value} jours`
     },
+    { 
+      field: 'dernier_passage', 
+      headerName: 'Dernier passage',
+      width: 130,
+      resizable: true,
+      valueFormatter: (params) => new Date(params.value).toLocaleDateString('fr-FR')
+    },
+    { field: 'agent', headerName: 'Agent', width: 130, resizable: true },
+    { field: 'tel', headerName: 'Téléphone', width: 130, resizable: true },
+    { field: 'adresse', headerName: 'Adresse', width: 200, resizable: true },
+    { 
+      field: 'montant_mensuel', 
+      headerName: 'Montant mensuel',
+      width: 130,
+      resizable: true,
+      valueFormatter: (params) => `${params.value} DA`
+    },
+    { 
+      field: 'date_recrutement', 
+      headerName: 'Date recrutement',
+      width: 130,
+      resizable: true,
+      valueFormatter: (params) => new Date(params.value).toLocaleDateString('fr-FR')
+    }
   ];
 
   const fetchClients = async () => {
@@ -98,18 +101,43 @@ const ClientList = () => {
   const handleAddClient = async (e) => {
     e.preventDefault();
     try {
+      // Format the dates to ISO string before sending
+      const formattedClient = {
+        ...newClient,
+        dernier_passage: newClient.dernier_passage?.toISOString().split('T')[0],
+        date_recrutement: newClient.date_recrutement?.toISOString().split('T')[0],
+        // Ensure numeric fields are numbers, not strings
+        mode_passage: parseInt(newClient.mode_passage),
+        montant_mensuel: parseInt(newClient.montant_mensuel)
+      };
+
       const response = await fetch('http://localhost:8000/api/clients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newClient),
+        body: JSON.stringify(formattedClient),
       });
-      if (!response.ok) throw new Error('Erreur lors de l\'ajout');
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Erreur lors de l\'ajout');
+      }
+
       await fetchClients();
-      setNewClient({ nom: '', prenom: '', email: '', entreprise: '', crnc: '' });
+      setNewClient({
+        nom: '',
+        specialite: '',
+        mode_passage: '',
+        dernier_passage: null,
+        agent: '',
+        tel: '',
+        adresse: '',
+        montant_mensuel: '',
+        date_recrutement: null
+      });
       setIsAddingClient(false);
       showSnackbar('Client ajouté avec succès', 'success');
     } catch (error) {
-      showSnackbar('Erreur lors de l\'ajout du client', 'error');
+      showSnackbar(error.message || 'Erreur lors de l\'ajout du client', 'error');
     }
   };
 
@@ -138,18 +166,26 @@ const ClientList = () => {
       [],
       [
         { v: 'Nom', t: 's', s: { font: { bold: true } } },
-        { v: 'Prénom', t: 's', s: { font: { bold: true } } },
-        { v: 'Email', t: 's', s: { font: { bold: true } } },
-        { v: 'Entreprise', t: 's', s: { font: { bold: true } } },
-        { v: 'CRNC', t: 's', s: { font: { bold: true } } }
+        { v: 'Spécialité', t: 's', s: { font: { bold: true } } },
+        { v: 'Mode de passage', t: 's', s: { font: { bold: true } } },
+        { v: 'Dernier passage', t: 's', s: { font: { bold: true } } },
+        { v: 'Agent', t: 's', s: { font: { bold: true } } },
+        { v: 'Téléphone', t: 's', s: { font: { bold: true } } },
+        { v: 'Adresse', t: 's', s: { font: { bold: true } } },
+        { v: 'Montant mensuel', t: 's', s: { font: { bold: true } } },
+        { v: 'Date recrutement', t: 's', s: { font: { bold: true } } }
       ],
       // Données des clients
       ...clients.map(client => [
         client.nom,
-        client.prenom,
-        client.email,
-        client.entreprise,
-        client.crnc
+        client.specialite,
+        client.mode_passage,
+        client.dernier_passage,
+        client.agent,
+        client.tel,
+        client.adresse,
+        client.montant_mensuel,
+        client.date_recrutement
       ])
     ];
 
@@ -160,10 +196,14 @@ const ClientList = () => {
     // Ajustement des largeurs de colonnes
     ws['!cols'] = [
       { wch: 15 }, // Nom
-      { wch: 15 }, // Prénom
-      { wch: 30 }, // Email
-      { wch: 25 }, // Entreprise
-      { wch: 15 }  // CRNC
+      { wch: 15 }, // Spécialité
+      { wch: 15 }, // Mode de passage
+      { wch: 15 }, // Dernier passage
+      { wch: 15 }, // Agent
+      { wch: 15 }, // Téléphone
+      { wch: 25 }, // Adresse
+      { wch: 15 }, // Montant mensuel
+      { wch: 15 }  // Date recrutement
     ];
 
     xlsxWriteFile(wb, `liste_clients_${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -183,10 +223,14 @@ const ClientList = () => {
         // Ignorer les lignes d'en-tête
         const clients = jsonData.slice(3).map(row => ({
           nom: row[0],
-          prenom: row[1],
-          email: row[2],
-          entreprise: row[3],
-          crnc: row[4]
+          specialite: row[1],
+          mode_passage: row[2],
+          dernier_passage: row[3],
+          agent: row[4],
+          tel: row[5],
+          adresse: row[6],
+          montant_mensuel: row[7],
+          date_recrutement: row[8]
         }));
 
         // Envoyer les clients au backend
@@ -209,114 +253,165 @@ const ClientList = () => {
   };
 
   return (
-    <Box sx={{ height: 600, width: '100%' }}>
-      <Stack direction="row" spacing={2} justifyContent="flex-end" mb={2}>
-        <input
-          type="file"
-          accept=".xlsx"
-          style={{ display: 'none' }}
-          id="import-file"
-          onChange={handleImportClients}
-        />
-        <label htmlFor="import-file">
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={fr}>
+      <Box sx={{ height: 600, width: '100%' }}>
+        <Stack direction="row" spacing={2} justifyContent="flex-end" mb={2}>
+          <input
+            type="file"
+            accept=".xlsx"
+            style={{ display: 'none' }}
+            id="import-file"
+            onChange={handleImportClients}
+          />
+          <label htmlFor="import-file">
+            <Button
+              variant="contained"
+              color="secondary"
+              component="span"
+            >
+              Importer Clients
+            </Button>
+          </label>
           <Button
             variant="contained"
-            color="secondary"
-            component="span"
+            color="primary"
+            onClick={handleExportClients}
           >
-            Importer Clients
+            Exporter Clients
           </Button>
-        </label>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleExportClients}
-        >
-          Exporter Clients
-        </Button>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setIsAddingClient(true)}
-        >
-          Nouveau Client
-        </Button>
-      </Stack>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setIsAddingClient(true)}
+          >
+            Nouveau Client
+          </Button>
+        </Stack>
 
-      <DataGrid
-        rows={clients}
-        columns={columns}
-        pageSize={10}
-        rowsPerPageOptions={[10, 25, 50]}
-        checkboxSelection
-        disableSelectionOnClick
-        loading={loading}
-      />
+        <DataGrid
+          rows={clients}
+          columns={columns}
+          pageSize={10}
+          rowsPerPageOptions={[10, 25, 50]}
+          loading={loading}
+          disableColumnSelector
+          autoHeight
+          showColumnRightBorder={false}
+          showCellRightBorder={false}
+          disableRowSelectionOnClick
+          disableMultipleRowSelection
+          hideFooterSelectedRowCount
+          columnVisibilityModel={{
+            nom: true,
+            specialite: true,
+            mode_passage: true,
+            dernier_passage: true,
+            agent: true,
+            tel: true,
+            adresse: true,
+            montant_mensuel: true,
+            date_recrutement: true
+          }}
+          columnResize
+        />
 
-      <Dialog open={isAddingClient} onClose={() => setIsAddingClient(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Ajouter un nouveau client</DialogTitle>
-        <form onSubmit={handleAddClient}>
-          <DialogContent>
-            <Stack spacing={2}>
-              <TextField
-                label="Nom"
-                value={newClient.nom}
-                onChange={(e) => setNewClient({ ...newClient, nom: e.target.value })}
-                required
-                fullWidth
-              />
-              <TextField
-                label="Prénom"
-                value={newClient.prenom}
-                onChange={(e) => setNewClient({ ...newClient, prenom: e.target.value })}
-                required
-                fullWidth
-              />
-              <TextField
-                label="Email"
-                type="email"
-                value={newClient.email}
-                onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
-                required
-                fullWidth
-              />
-              <TextField
-                label="Entreprise"
-                value={newClient.entreprise}
-                onChange={(e) => setNewClient({ ...newClient, entreprise: e.target.value })}
-                required
-                fullWidth
-              />
-              <TextField
-                label="CRNC"
-                value={newClient.crnc}
-                onChange={(e) => setNewClient({ ...newClient, crnc: e.target.value })}
-                required
-                fullWidth
-              />
-            </Stack>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setIsAddingClient(false)}>Annuler</Button>
-            <Button type="submit" variant="contained">Enregistrer</Button>
-          </DialogActions>
-        </form>
-      </Dialog>
+        <Dialog open={isAddingClient} onClose={() => setIsAddingClient(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Ajouter un nouveau client</DialogTitle>
+          <form onSubmit={handleAddClient}>
+            <DialogContent>
+              <Stack spacing={2}>
+                <TextField
+                  label="Nom"
+                  value={newClient.nom}
+                  onChange={(e) => setNewClient({ ...newClient, nom: e.target.value })}
+                  required
+                  fullWidth
+                />
+                <TextField
+                  label="Spécialité"
+                  value={newClient.specialite}
+                  onChange={(e) => setNewClient({ ...newClient, specialite: e.target.value })}
+                  required
+                  fullWidth
+                />
+                <TextField
+                  label="Mode de passage (jours)"
+                  type="number"
+                  value={newClient.mode_passage}
+                  onChange={(e) => setNewClient({ ...newClient, mode_passage: e.target.value })}
+                  required
+                  fullWidth
+                  inputProps={{ min: 1, max: 30 }}
+                />
+                <DatePicker
+                  label="Dernier passage"
+                  value={newClient.dernier_passage}
+                  onChange={(date) => setNewClient({ ...newClient, dernier_passage: date })}
+                  renderInput={(params) => <TextField {...params} required fullWidth />}
+                />
+                <TextField
+                  label="Agent"
+                  value={newClient.agent}
+                  onChange={(e) => setNewClient({ ...newClient, agent: e.target.value })}
+                  required
+                  fullWidth
+                />
+                <TextField
+                  label="Téléphone"
+                  value={newClient.tel}
+                  onChange={(e) => setNewClient({ ...newClient, tel: e.target.value })}
+                  required
+                  fullWidth
+                  helperText="Format: 0XXXXXXXXX"
+                />
+                <TextField
+                  label="Adresse"
+                  value={newClient.adresse}
+                  onChange={(e) => setNewClient({ ...newClient, adresse: e.target.value })}
+                  required
+                  fullWidth
+                  multiline
+                  rows={2}
+                />
+                <TextField
+                  label="Montant mensuel (DA)"
+                  type="number"
+                  value={newClient.montant_mensuel}
+                  onChange={(e) => setNewClient({ ...newClient, montant_mensuel: e.target.value })}
+                  required
+                  fullWidth
+                  inputProps={{ min: 1 }}
+                />
+                <DatePicker
+                  label="Date recrutement"
+                  value={newClient.date_recrutement}
+                  onChange={(date) => setNewClient({ ...newClient, date_recrutement: date })}
+                  renderInput={(params) => <TextField {...params} required fullWidth />}
+                />
+              </Stack>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setIsAddingClient(false)}>Annuler</Button>
+              <Button type="submit" variant="contained">Enregistrer</Button>
+            </DialogActions>
+          </form>
+        </Dialog>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
           onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
         >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Box>
+          <Alert
+            onClose={() => setSnackbar({ ...snackbar, open: false })}
+            severity={snackbar.severity}
+            sx={{ width: '100%' }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </Box>
+    </LocalizationProvider>
   );
 };
 

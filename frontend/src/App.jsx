@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material';
 import {
   AppBar,
@@ -8,65 +8,75 @@ import {
   Container,
   CssBaseline,
   Box,
-  IconButton,
-  Drawer,
+  Button,
 } from '@mui/material';
-import { Menu as MenuIcon } from '@mui/icons-material';
+import {
+  ArrowBack as ArrowBackIcon,
+} from '@mui/icons-material';
 import Dashboard from './pages/Dashboard';
 import ClientList from './pages/ClientList';
 import FactureList from './pages/FactureList';
 import Planning from './pages/Planning';
-import NotificationBell from './components/NotificationBell';
-import DynamicMenu from './components/navigation/DynamicMenu';
 import { theme } from './theme';
+import ErrorBoundary from './components/ErrorBoundary';
 
-function App() {
-  const [drawerOpen, setDrawerOpen] = React.useState(false);
+function AppContent() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const showReturnButton = location.pathname !== '/dashboard';
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Router>
-        <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-          <AppBar position="static" elevation={0}>
-            <Toolbar>
-              <IconButton
-                size="large"
-                edge="start"
-                color="inherit"
-                aria-label="menu"
-                sx={{ mr: 2 }}
-                onClick={() => setDrawerOpen(true)}
-              >
-                <MenuIcon />
-              </IconButton>
-              <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                Gestion d'Entreprise
-              </Typography>
-              <NotificationBell />
-            </Toolbar>
-          </AppBar>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <AppBar position="static" elevation={0}>
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            Gestion d'Entreprise
+          </Typography>
+          {showReturnButton && (
+            <Button
+              color="inherit"
+              size="large"
+              startIcon={<ArrowBackIcon sx={{ fontSize: 30 }} />}
+              onClick={() => navigate('/dashboard')}
+              sx={{
+                fontSize: '1.2rem',
+                fontWeight: 'bold',
+                padding: '8px 24px',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                }
+              }}
+            >
+              RETOUR
+            </Button>
+          )}
+        </Toolbar>
+      </AppBar>
 
-          <Drawer
-            anchor="left"
-            open={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-          >
-            <DynamicMenu onClose={() => setDrawerOpen(false)} />
-          </Drawer>
+      <Container maxWidth="xl" sx={{ py: 4, flex: 1 }}>
+        <Routes>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/clients" element={<ClientList />} />
+          <Route path="/factures" element={<FactureList />} />
+          <Route path="/planning" element={<Planning />} />
+          <Route path="/" element={<Navigate replace to="/dashboard" />} />
+        </Routes>
+      </Container>
+    </Box>
+  );
+}
 
-          <Container maxWidth="xl" sx={{ py: 4, flex: 1 }}>
-            <Routes>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/clients" element={<ClientList />} />
-              <Route path="/factures" element={<FactureList />} />
-              <Route path="/planning" element={<Planning />} />
-              <Route path="/" element={<Dashboard />} />
-            </Routes>
-          </Container>
-        </Box>
-      </Router>
-    </ThemeProvider>
+function App() {
+  return (
+    <ErrorBoundary>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Router>
+          <AppContent />
+        </Router>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

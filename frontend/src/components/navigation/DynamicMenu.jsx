@@ -5,49 +5,25 @@ import {
   ListItemIcon,
   ListItemText,
   ListItemButton,
-  Divider,
   Box,
-  Typography,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
   People as PeopleIcon,
   Receipt as ReceiptIcon,
-  Description as DescriptionIcon,
-  DirectionsCar as DirectionsCarIcon,
-  CalendarMonth as CalendarMonthIcon,
-  LocalShipping as MissionIcon,
-  Settings as SettingsIcon,
+  CalendarToday as CalendarIcon,
 } from '@mui/icons-material';
-import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-const menuConfig = {
-  admin: [
+const DynamicMenu = ({ onClose }) => {
+  const navigate = useNavigate();
+
+  const menuItems = [
     { text: 'Tableau de bord', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Clients', icon: <PeopleIcon />, path: '/clients' },
     { text: 'Factures', icon: <ReceiptIcon />, path: '/factures' },
-    { text: 'Chauffeurs', icon: <DirectionsCarIcon />, path: '/chauffeurs' },
-    { text: 'Planning', icon: <CalendarMonthIcon />, path: '/planning' },
-    { text: 'Paramètres', icon: <SettingsIcon />, path: '/settings' },
-  ],
-  dispatcher: [
-    { text: 'Planning', icon: <CalendarMonthIcon />, path: '/planning' },
-    { text: 'Chauffeurs', icon: <DirectionsCarIcon />, path: '/chauffeurs' },
-    { text: 'Paramètres', icon: <SettingsIcon />, path: '/settings' },
-  ],
-  chauffeur: [
-    { text: 'Mes Missions', icon: <MissionIcon />, path: '/mes-missions' },
-    { text: 'Mon Planning', icon: <CalendarMonthIcon />, path: '/mon-planning' },
-    { text: 'Paramètres', icon: <SettingsIcon />, path: '/settings' },
-  ],
-};
-
-const DynamicMenu = ({ onClose }) => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
-  const menuItems = menuConfig[user?.role] || [];
+    { text: 'Planning', icon: <CalendarIcon />, path: '/planning' },
+  ];
 
   const handleNavigation = (path) => {
     navigate(path);
@@ -55,16 +31,7 @@ const DynamicMenu = ({ onClose }) => {
   };
 
   return (
-    <>
-      <Box sx={{ p: 3 }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
-          {user?.username}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {user?.role.charAt(0).toUpperCase() + user?.role.slice(1)}
-        </Typography>
-      </Box>
-      <Divider />
+    <Box sx={{ width: 250 }}>
       <List sx={{ px: 2 }}>
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
@@ -94,7 +61,7 @@ const DynamicMenu = ({ onClose }) => {
           </ListItem>
         ))}
       </List>
-    </>
+    </Box>
   );
 };
 

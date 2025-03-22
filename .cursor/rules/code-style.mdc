@@ -1,0 +1,7 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+Write clear, readable and well commented code even if that leads to longer code.
+Try to use as little complex language features as possible (only when absolutely necessary).
