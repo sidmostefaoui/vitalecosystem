@@ -10,22 +10,33 @@ import {
   Alert,
 } from '@mui/material';
 import {
-  People as PeopleIcon,
-  Receipt as ReceiptIcon,
-  TrendingUp as TrendingUpIcon,
-  Notifications as NotificationsIcon,
+  AssignmentTurnedIn as RegimeForfaitIcon,
+  BarChart as RegimeReelIcon,
+  Inventory as InventaireIcon,
+  LocalShipping as FournisseursIcon,
 } from '@mui/icons-material';
 
+/**
+ * Dashboard component - Main entry point of the application.
+ * Displays a grid of cards representing the main sections of the application.
+ * Fetches dashboard statistics from the API.
+ */
 const Dashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState(null);
 
+  // Fetch dashboard data on component mount
   useEffect(() => {
     fetchDashboardData();
   }, []);
 
+  /**
+   * Fetches dashboard statistics from the API.
+   * Updates the component state with the retrieved data.
+   * Handles loading state and potential errors.
+   */
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
@@ -45,33 +56,43 @@ const Dashboard = () => {
     }
   };
 
+  /**
+   * Handles navigation when a card is clicked.
+   * Converts the card title to a URL-friendly format.
+   * 
+   * @param {string} title - The title of the card that was clicked
+   */
+  const handleCardClick = (title) => {
+    // Navigate to a nested route for each card
+    const path = title.toLowerCase().replace(/\s+/g, '-');
+    navigate(`/${path}`);
+  };
+
+  // Define the main navigation cards
   const mainCards = [
     {
-      title: 'Clients',
-      value: stats?.total_clients || 0,
-      icon: <PeopleIcon sx={{ fontSize: 40 }} />,
-      onClick: () => navigate('/clients'),
+      title: 'Régime Forfait',
+      icon: <RegimeForfaitIcon sx={{ fontSize: 60 }} />,
+      onClick: () => handleCardClick('Régime Forfait'),
     },
     {
-      title: 'Factures',
-      value: stats?.factures?.total || 0,
-      icon: <ReceiptIcon sx={{ fontSize: 40 }} />,
-      onClick: () => navigate('/factures'),
+      title: 'Régime Réel',
+      icon: <RegimeReelIcon sx={{ fontSize: 60 }} />,
+      onClick: () => handleCardClick('Régime Réel'),
     },
     {
-      title: 'Chiffre d\'affaires',
-      value: stats?.factures?.montant_total?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '0',
-      icon: <TrendingUpIcon sx={{ fontSize: 40 }} />,
-      subtext: 'Total des factures'
+      title: 'Inventaire',
+      icon: <InventaireIcon sx={{ fontSize: 60 }} />,
+      onClick: () => handleCardClick('Inventaire'),
     },
     {
-      title: 'Notifications',
-      value: stats?.notifications?.total || 0,
-      icon: <NotificationsIcon sx={{ fontSize: 40 }} />,
-      subtext: 'Messages non lus'
-    }
+      title: 'Fournisseurs',
+      icon: <FournisseursIcon sx={{ fontSize: 60 }} />,
+      onClick: () => handleCardClick('Fournisseurs'),
+    },
   ];
 
+  // Display loading indicator while fetching data
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
@@ -80,44 +101,50 @@ const Dashboard = () => {
     );
   }
 
+  // Display error message if data fetching failed
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ mt: 2 }}>
+        {error}
+      </Alert>
+    );
+  }
+
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-          Tableau de Bord
-        </Typography>
-      </Stack>
+      {/* Dashboard title */}
+      <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 4 }}>
+        Tableau de Bord
+      </Typography>
 
-      <Grid container spacing={3}>
+      {/* Grid of main navigation cards */}
+      <Grid container spacing={4}>
         {mainCards.map((card, index) => (
-          <Grid item xs={12} md={4} key={index}>
+          <Grid item xs={12} sm={6} md={4} key={index}>
             <Paper
               sx={{
                 p: 3,
-                cursor: card.onClick ? 'pointer' : 'default',
-                '&:hover': card.onClick ? {
+                height: '240px',
+                cursor: 'pointer',
+                '&:hover': {
                   transform: 'translateY(-4px)',
                   boxShadow: 3
-                } : {},
+                },
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center', // Center content vertically
+                alignItems: 'center', // Center content horizontally
               }}
               onClick={card.onClick}
             >
-              <Stack spacing={2}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Stack spacing={5} sx={{ height: '100%', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                   {card.icon}
                 </Box>
                 <Box>
-                  <Typography variant="h6" gutterBottom>
+                  <Typography variant="h5">
                     {card.title}
                   </Typography>
-                  <Typography variant="h4">
-                    {card.value}
-                  </Typography>
-                  {card.subtext && (
-                    <Typography variant="body2" color="text.secondary">
-                      {card.subtext}
-                    </Typography>
-                  )}
                 </Box>
               </Stack>
             </Paper>

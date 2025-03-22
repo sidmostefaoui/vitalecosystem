@@ -1,7 +1,9 @@
 ---
-description: 
+description: Project coding style
 globs: 
 alwaysApply: false
 ---
-Write clear, readable and well commented code even if that leads to longer code.
-Try to use as little complex language features as possible (only when absolutely necessary).
+- Write clear, readable and well commented code even if that leads to longer code.
+- Try to use as little complex language features as possible (only when absolutely necessary).
+- Only use external libraries when necessary. The scenarios when you can use external libraries are in "no-library.mdc".
+- Write comments in English.

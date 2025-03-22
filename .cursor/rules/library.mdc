@@ -1,0 +1,10 @@
+---
+description: When the external libraries are allowed.
+globs: 
+alwaysApply: true
+---
+scenarios when you can use external libraries:
+
+- Material UI for frontend.
+- Authentification libraries for backend.
+

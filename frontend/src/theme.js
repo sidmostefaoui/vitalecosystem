@@ -1,66 +1,61 @@
 import { createTheme } from '@mui/material';
 
+/**
+ * Application theme configuration for VITALECOSYSTEM
+ * Defines color palette, typography, and component styling
+ */
 export const theme = createTheme({
   palette: {
     mode: 'light',
+    // Primary color - dark blue, used for main UI elements
     primary: {
       main: '#1e3a5f',
       light: '#2c5282',
       dark: '#152951',
     },
+    // Secondary color - gray, used for less prominent UI elements
     secondary: {
       main: '#475569',
-      light: '#64748b',
-      dark: '#334155',
     },
+    // Success color - teal, used for success messages and indicators
     success: {
       main: '#0f766e',
-      light: '#14b8a6',
-      dark: '#0d5a54',
     },
+    // Warning color - amber, used for warning messages and indicators
     warning: {
       main: '#b45309',
-      light: '#d97706',
-      dark: '#92400e',
     },
+    // Error color - red, used for error messages and indicators
     error: {
       main: '#9f1239',
-      light: '#be123c',
-      dark: '#881337',
     },
+    // Background colors for the application
     background: {
-      default: '#f8fafc',
-      paper: '#ffffff',
-    },
-    text: {
-      primary: '#0f172a',
-      secondary: '#475569',
+      default: '#f8fafc', // Light gray for the main background
+      paper: '#ffffff',   // White for card backgrounds
     },
   },
   typography: {
+    // Font family prioritizing system fonts for better performance
     fontFamily: [
-      'Plus Jakarta Sans',
-      '-apple-system',
-      'BlinkMacSystemFont',
-      '"Segoe UI"',
       'Roboto',
       'Arial',
       'sans-serif',
     ].join(','),
+    // Heading styles
     h4: {
       fontWeight: 600,
-      letterSpacing: '-0.5px',
     },
     h6: {
       fontWeight: 500,
-      letterSpacing: '-0.25px',
     },
+    // Button text styling - no text transform for better readability in French
     button: {
       textTransform: 'none',
-      fontWeight: 500,
     },
   },
   components: {
+    // AppBar custom styling - light background with subtle shadow
     MuiAppBar: {
       styleOverrides: {
         root: {
@@ -71,35 +66,11 @@ export const theme = createTheme({
         },
       },
     },
+    // Button custom styling - no shadow for flat design
     MuiButton: {
       styleOverrides: {
         root: {
           boxShadow: 'none',
-          '&:hover': {
-            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-          },
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid #e2e8f0',
-        },
-      },
-    },
-    MuiDataGrid: {
-      styleOverrides: {
-        root: {
-          border: 'none',
-          '& .MuiDataGrid-cell': {
-            borderColor: '#e2e8f0',
-          },
-          '& .MuiDataGrid-columnHeaders': {
-            backgroundColor: '#f8fafc',
-            borderColor: '#e2e8f0',
-          },
         },
       },
     },

@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Paper,
   Typography,
-  Stack,
-  Chip,
-  useTheme,
   CircularProgress,
-  Alert
+  Alert,
+  Button,
+  Stack,
+  Paper,
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
+import { Add as AddIcon } from '@mui/icons-material';
 
 const FactureList = () => {
-  const theme = useTheme();
   const [factures, setFactures] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,95 +24,56 @@ const FactureList = () => {
     try {
       setLoading(true);
       const response = await fetch('http://localhost:8000/api/factures');
-      if (!response.ok) {
-        throw new Error('Erreur lors du chargement des factures');
-      }
+      if (!response.ok) throw new Error('Erreur réseau');
       const data = await response.json();
       setFactures(data);
     } catch (error) {
-      console.error('Erreur:', error);
       setError('Impossible de charger les factures');
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
   const columns = [
+    { field: 'numero', headerName: 'Numéro', width: 150 },
     { 
-      field: 'numero', 
-      headerName: 'N° Facture', 
-      width: 130,
-      renderCell: (params) => (
-        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-          {params.value}
-        </Typography>
-      )
+      field: 'date_emission', 
+      headerName: 'Date d\'émission', 
+      width: 150,
+      valueFormatter: (params) => new Date(params.value).toLocaleDateString('fr-FR')
     },
     { 
-      field: 'date', 
-      headerName: 'Date', 
-      width: 130,
-      valueFormatter: (params) => {
-        return new Date(params.value).toLocaleDateString('fr-FR');
-      }
+      field: 'date_echeance', 
+      headerName: 'Date d\'échéance', 
+      width: 150,
+      valueFormatter: (params) => new Date(params.value).toLocaleDateString('fr-FR')
     },
-    {
-      field: 'client',
-      headerName: 'Client',
-      width: 250,
-      valueGetter: (params) => `${params.row.client_entreprise} (${params.row.client_nom} ${params.row.client_prenom})`,
-      renderCell: (params) => (
-        <Typography variant="body2">
-          <strong>{params.row.client_entreprise}</strong>
-          <br />
-          {params.row.client_nom} {params.row.client_prenom}
-        </Typography>
-      )
+    { 
+      field: 'montant', 
+      headerName: 'Montant', 
+      width: 150,
+      valueFormatter: (params) => `${params.value.toLocaleString('fr-FR')} DA`
     },
-    {
-      field: 'montant',
-      headerName: 'Montant',
-      width: 130,
-      type: 'number',
-      valueFormatter: (params) => {
-        if (params.value == null) return '';
-        return params.value.toLocaleString('fr-FR', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        });
-      },
+    { 
+      field: 'statut', 
+      headerName: 'Statut', 
+      width: 150,
       renderCell: (params) => (
-        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-          {params.value.toLocaleString('fr-FR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-          })}
-        </Typography>
-      )
-    },
-    {
-      field: 'statut',
-      headerName: 'Statut',
-      width: 130,
-      renderCell: (params) => (
-        <Chip
-          label={params.value === 'payée' ? 'Payée' : 'En attente'}
-          color={params.value === 'payée' ? 'success' : 'warning'}
-          size="small"
-          sx={{ minWidth: 100 }}
-        />
-      )
-    },
-    {
-      field: 'description',
-      headerName: 'Description',
-      width: 300,
-      renderCell: (params) => (
-        <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+        <Paper 
+          sx={{ 
+            bgcolor: params.value === 'payée' ? 'success.light' : 'warning.light',
+            px: 1.5,
+            py: 0.5,
+            borderRadius: 1,
+            color: 'white'
+          }}
+        >
           {params.value}
-        </Typography>
+        </Paper>
       )
-    }
+    },
+    { field: 'description', headerName: 'Description', width: 300 },
   ];
 
   if (loading) {
@@ -124,42 +84,35 @@ const FactureList = () => {
     );
   }
 
-  if (error) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">{error}</Alert>
-      </Box>
-    );
-  }
-
   return (
-    <Box sx={{ height: '100%', width: '100%' }}>
-      <Stack spacing={3}>
+    <Box sx={{ height: 600, width: '100%' }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-          Liste des Factures
+          Factures
         </Typography>
-        <Paper sx={{ height: 600, width: '100%' }}>
-          <DataGrid
-            rows={factures}
-            columns={columns}
-            pageSize={10}
-            rowsPerPageOptions={[10, 25, 50]}
-            disableSelectionOnClick
-            sx={{
-              '& .MuiDataGrid-cell': {
-                borderBottom: `1px solid ${theme.palette.divider}`,
-              },
-              '& .MuiDataGrid-columnHeaders': {
-                backgroundColor: theme.palette.background.default,
-                borderBottom: `2px solid ${theme.palette.divider}`,
-              },
-              '& .MuiDataGrid-row:hover': {
-                backgroundColor: theme.palette.action.hover,
-              },
-            }}
-          />
-        </Paper>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+        >
+          Nouvelle Facture
+        </Button>
       </Stack>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      <DataGrid
+        rows={factures}
+        columns={columns}
+        pageSize={10}
+        rowsPerPageOptions={[10, 25, 50]}
+        autoHeight
+        disableRowSelectionOnClick
+        disableColumnSelector
+      />
     </Box>
   );
 };

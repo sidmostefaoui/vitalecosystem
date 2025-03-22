@@ -1,0 +1,14 @@
+---
+description: Project description and requirements
+globs: 
+alwaysApply: true
+---
+This project is an internal management app for a waste management company in Algeria.
+The name of the company is "VITALECOSYSTEM".
+
+This app handles:
+- Client management (Adding & Deleting clients, Invoicing, Contracts etc..)
+- Supplier managaement
+- Inventory management
+
+The working language of the app and conventions should be in french. Some conventions like phone numbers should follow Algerian standards.
