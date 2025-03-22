@@ -15,7 +15,6 @@ import {
 } from '@mui/icons-material';
 import Dashboard from './pages/Dashboard';
 import ClientList from './pages/ClientList';
-import FactureList from './pages/FactureList';
 import SubMenu from './pages/SubMenu';
 import { theme } from './theme';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -81,7 +80,6 @@ function AppContent() {
         <Routes>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/clients" element={<ClientList />} />
-          <Route path="/factures" element={<FactureList />} />
           <Route path="/régime-forfait" element={<SubMenu title="Régime Forfait" />} />
           <Route path="/régime-réel" element={<SubMenu title="Régime Réel" />} />
           <Route path="/inventaire" element={<SubMenu title="Inventaire" />} />
