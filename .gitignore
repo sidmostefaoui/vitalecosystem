@@ -22,3 +22,4 @@ build/
 .idea/
 *.swp
 *.swo
+backend/db/db.sqlite

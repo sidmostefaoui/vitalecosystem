@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -6,6 +6,7 @@ import {
   Grid,
   Paper,
   Stack,
+  Button
 } from '@mui/material';
 import {
   Article as ArticleIcon,
@@ -19,8 +20,6 @@ import {
   LocalShipping as ShippingIcon,
   Storefront as FournisseursIcon,
   Receipt as BonsAchatsIcon,
-  Engineering as EmployeIcon,
-  Assignment as ContratIcon,
 } from '@mui/icons-material';
 
 /**
@@ -67,18 +66,10 @@ const SubMenu = ({ title }) => {
       },
     ];
   }
-  // Specific submenu for Agents section with Employés and Contrats
+  // For Agents section, we'll render a different UI with a button to the list
   else if (title === "Agents") {
-    menuItems = [
-      {
-        title: 'Employés',
-        icon: <EmployeIcon sx={{ fontSize: 60 }} />,
-      },
-      {
-        title: 'Contrats',
-        icon: <ContratIcon sx={{ fontSize: 60 }} />,
-      },
-    ];
+    // We'll handle this differently below
+    menuItems = [];
   }
   else {
     // Default submenu options for other sections
@@ -110,45 +101,56 @@ const SubMenu = ({ title }) => {
     ];
   }
 
+  // Special case for Agents section - redirect immediately to agents list
+  useEffect(() => {
+    if (title === "Agents") {
+      navigate('/agents-list');
+    }
+  }, [title, navigate]);
+
+  // If we're on the Agents page, we don't actually render anything
+  // since we redirect, but we'll return a loading state
+  if (title === "Agents") {
+    return (
+      <Box sx={{ p: 4 }}>
+        <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 4 }}>
+          {title}
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      {/* Submenu title */}
+    <Box sx={{ p: 4 }}>
       <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 4 }}>
         {title}
       </Typography>
-
-      {/* Grid of menu options */}
       <Grid container spacing={4}>
         {menuItems.map((item, index) => (
           <Grid item xs={12} sm={6} md={4} key={index}>
             <Paper
+              elevation={3}
               sx={{
                 p: 3,
-                height: '240px',
-                cursor: 'pointer',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: 3,
-                },
+                textAlign: 'center',
+                height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'center',
                 alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-5px)',
+                  boxShadow: 6,
+                }
               }}
               onClick={item.onClick}
             >
-              <Stack spacing={5} sx={{ height: '100%', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-                {/* Icon */}
-                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  {item.icon}
-                </Box>
-                {/* Title only */}
-                <Box>
-                  <Typography variant="h5">
-                    {item.title}
-                  </Typography>
-                </Box>
-              </Stack>
+              {item.icon}
+              <Typography variant="h6" sx={{ mt: 2, fontWeight: 'bold' }}>
+                {item.title}
+              </Typography>
             </Paper>
           </Grid>
         ))}

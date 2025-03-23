@@ -19,7 +19,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { fr } from 'date-fns/locale';
 
-const ClientList = () => {
+const Clients = () => {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -276,4 +276,4 @@ const ClientList = () => {
   );
 };
 
-export default ClientList; 
+export default Clients; 

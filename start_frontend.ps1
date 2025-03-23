@@ -1,5 +1,5 @@
 # Navigate to the frontend directory
-cd frontend
+Set-Location frontend
 
 # Install dependencies if needed (uncomment if you want to run this every time)
 # npm install

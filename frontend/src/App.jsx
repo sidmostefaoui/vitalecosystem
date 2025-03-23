@@ -14,7 +14,8 @@ import {
   ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import Dashboard from './pages/Dashboard';
-import ClientList from './pages/ClientList';
+import Clients from './pages/Clients';
+import Agents from './pages/Agents';
 import SubMenu from './pages/SubMenu';
 import { theme } from './theme';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -34,12 +35,16 @@ function AppContent() {
   /**
    * Handle the return button navigation based on current location
    * For the clients page, return to Régime Forfait menu
+   * For the agents-list page, return to Agents menu
    * For all other pages, return to the dashboard
    */
   const handleReturn = () => {
     if (location.pathname === '/clients') {
       // If on clients page, go back to Régime Forfait menu
       navigate('/régime-forfait');
+    } else if (location.pathname === '/agents-list') {
+      // If on agents-list page, go back to dashboard since Agents redirects
+      navigate('/dashboard');
     } else {
       // Otherwise go back to dashboard
       navigate('/dashboard');
@@ -79,7 +84,8 @@ function AppContent() {
       <Container maxWidth="xl" sx={{ py: 4, flex: 1 }}>
         <Routes>
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/clients" element={<ClientList />} />
+          <Route path="/clients" element={<Clients />} />
+          <Route path="/agents-list" element={<Agents />} />
           <Route path="/régime-forfait" element={<SubMenu title="Régime Forfait" />} />
           <Route path="/régime-réel" element={<SubMenu title="Régime Réel" />} />
           <Route path="/inventaire" element={<SubMenu title="Inventaire" />} />

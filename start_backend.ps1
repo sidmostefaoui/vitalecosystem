@@ -1,5 +1,5 @@
 # Navigate to the backend directory
-cd backend
+Set-Location backend
 
 # Activate the virtual environment
 .\venv\Scripts\Activate.ps1
