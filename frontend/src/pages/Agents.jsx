@@ -21,7 +21,7 @@ import {
   FormHelperText,
   Tooltip
 } from '@mui/material';
-import { DataGrid } from '@mui/x-data-grid';
+import { DataGrid, frFR, GridActionsCellItem } from '@mui/x-data-grid';
 import { 
   Add as AddIcon,
   Edit as EditIcon,
@@ -85,34 +85,31 @@ const Agents = () => {
       valueFormatter: (params) => params.value || 'Actif'
     },
     { 
-      field: 'operations', 
-      headerName: 'Opérations', 
-      width: 180,
-      sortable: false,
-      renderCell: (params) => (
-        <Stack direction="row" spacing={1}>
-          <IconButton 
-            size="small" 
-            color="primary" 
-            aria-label="modifier"
-            onClick={() => handleEditClick(params.row)}
-          >
-            <EditIcon />
-          </IconButton>
-          <IconButton size="small" color="info" aria-label="calendrier">
-            <CalendarIcon />
-          </IconButton>
-          <Tooltip title="Supprimer">
-            <IconButton 
-              edge="end" 
-              aria-label="delete"
-              onClick={() => handleDeleteAgent(params.row.id)}
-            >
-              <DeleteIcon />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      )
+      field: 'actions', 
+      type: 'actions',
+      headerName: 'Actions', 
+      width: 100,
+      pinned: 'right',
+      getActions: (params) => [
+        <GridActionsCellItem
+          icon={<EditIcon />}
+          label="Modifier"
+          onClick={() => handleEditClick(params.row)}
+          sx={{ color: '#FF9800' }}
+        />,
+        <GridActionsCellItem
+          icon={<DeleteIcon />}
+          label="Supprimer"
+          onClick={() => handleDeleteAgent(params.row.id)}
+          sx={{ color: '#F44336' }}
+        />,
+        <GridActionsCellItem
+          icon={<CalendarIcon />}
+          label="Calendrier"
+          onClick={() => {}}
+          sx={{ color: '#1976D2' }}
+        />
+      ]
     }
   ];
 
@@ -369,6 +366,12 @@ const Agents = () => {
         disableRowSelectionOnClick
         disableColumnSelector
         hideFooterSelectedRowCount
+        localeText={frFR.components.MuiDataGrid.defaultProps.localeText}
+        sx={{
+          '& .MuiDataGrid-columnHeaderTitle': {
+            fontWeight: 'bold',
+          }
+        }}
       />
 
       {/* Add Agent Dialog */}

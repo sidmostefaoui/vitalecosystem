@@ -7,3 +7,5 @@ alwaysApply: true
 - Try to use as little complex language features as possible (only when absolutely necessary).
 - Only use external libraries when necessary. The scenarios when you can use external libraries are in "no-library.mdc".
 - Write comments in English.
+- Use MUI components whenever possible.
+- When using the datagrid mui component, Always make the column names use bold styling.

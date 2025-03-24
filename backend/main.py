@@ -147,6 +147,35 @@ class Agent(BaseModel):
             }
         }
 
+# Product model
+class Produit(BaseModel):
+    id: Optional[int] = None
+    designation: str
+
+# Service model
+class Service(BaseModel):
+    id: Optional[int] = None
+    designation: str
+    incineration: str = Field(..., description="Peut être 'Oui' ou 'Non'")
+    
+    @validator('incineration')
+    def validate_incineration(cls, v):
+        valid_values = ['Oui', 'Non']
+        if v not in valid_values:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Valeur d'incinération invalide. Valeurs acceptées: {', '.join(valid_values)}"
+            )
+        return v
+
+# Fournisseur model
+class Fournisseur(BaseModel):
+    """Fournisseur model"""
+    id: Optional[int] = None
+    nom: str
+    telephone: str
+    adresse: str
+
 # API Endpoints
 @app.get("/api/dashboard/stats")
 async def get_dashboard_stats():
@@ -312,4 +341,372 @@ async def delete_agent(agent_id: int, conn = Depends(get_db)):
         raise
     except Exception as e:
         print(f"Error deleting agent {agent_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+# Product endpoints
+@app.get("/api/produits", response_model=List[Produit])
+async def get_produits(conn = Depends(get_db)):
+    """Get all products."""
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Produit")
+        produits = cursor.fetchall()
+        
+        # Convert to list of dicts for Pydantic model
+        return [dict(produit) for produit in produits]
+    except Exception as e:
+        # Log the error for server-side debugging
+        print(f"Error fetching products: {str(e)}")
+        # Return a user-friendly error
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.post("/api/produits", response_model=Produit)
+async def create_produit(produit: Produit, conn = Depends(get_db)):
+    """Create a new product."""
+    try:
+        cursor = conn.cursor()
+        
+        # Check for unique designation
+        cursor.execute("SELECT id FROM Produit WHERE designation = ?", (produit.designation,))
+        if cursor.fetchone() is not None:
+            raise HTTPException(status_code=400, detail=f"Un produit avec la désignation '{produit.designation}' existe déjà")
+        
+        # Get next ID
+        cursor.execute("SELECT MAX(id) FROM Produit")
+        max_id = cursor.fetchone()[0]
+        next_id = 1 if max_id is None else max_id + 1
+        
+        # Insert the new product
+        cursor.execute("""
+            INSERT INTO Produit (id, designation)
+            VALUES (?, ?)
+        """, (
+            next_id,
+            produit.designation
+        ))
+        
+        conn.commit()
+        
+        # Return the created product with its ID
+        return {**produit.dict(), "id": next_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error creating product: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.put("/api/produits/{produit_id}", response_model=Produit)
+async def update_produit(produit_id: int, produit: Produit, conn = Depends(get_db)):
+    """Update an existing product."""
+    try:
+        cursor = conn.cursor()
+        
+        # Check if product exists
+        cursor.execute("SELECT id FROM Produit WHERE id = ?", (produit_id,))
+        if cursor.fetchone() is None:
+            raise HTTPException(status_code=404, detail=f"Produit avec ID {produit_id} non trouvé")
+        
+        # Check for unique designation (excluding current product)
+        cursor.execute("SELECT id FROM Produit WHERE designation = ? AND id != ?", 
+                      (produit.designation, produit_id))
+        if cursor.fetchone() is not None:
+            raise HTTPException(status_code=400, detail=f"Un produit avec la désignation '{produit.designation}' existe déjà")
+        
+        # Update the product
+        cursor.execute("""
+            UPDATE Produit
+            SET designation = ?
+            WHERE id = ?
+        """, (
+            produit.designation,
+            produit_id
+        ))
+        
+        conn.commit()
+        
+        # Return the updated product
+        return {**produit.dict(), "id": produit_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error updating product {produit_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.delete("/api/produits/{produit_id}")
+async def delete_produit(produit_id: int, conn = Depends(get_db)):
+    """Delete a product."""
+    try:
+        cursor = conn.cursor()
+        
+        # Check if product exists
+        cursor.execute("SELECT id FROM Produit WHERE id = ?", (produit_id,))
+        if cursor.fetchone() is None:
+            raise HTTPException(status_code=404, detail=f"Produit avec ID {produit_id} non trouvé")
+        
+        # Delete the product
+        cursor.execute("DELETE FROM Produit WHERE id = ?", (produit_id,))
+        conn.commit()
+        
+        return {"message": f"Produit avec ID {produit_id} supprimé avec succès"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error deleting product {produit_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+# Service endpoints
+@app.get("/api/services", response_model=List[Service])
+async def get_services(conn = Depends(get_db)):
+    """Get all services."""
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Service")
+        services = cursor.fetchall()
+        
+        # Convert to list of dicts for Pydantic model
+        return [dict(service) for service in services]
+    except Exception as e:
+        # Log the error for server-side debugging
+        print(f"Error fetching services: {str(e)}")
+        # Return a user-friendly error
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.post("/api/services", response_model=Service)
+async def create_service(service: Service, conn = Depends(get_db)):
+    """Create a new service."""
+    try:
+        cursor = conn.cursor()
+        
+        # Check for unique designation
+        cursor.execute("SELECT id FROM Service WHERE designation = ?", (service.designation,))
+        if cursor.fetchone() is not None:
+            raise HTTPException(status_code=400, detail=f"Un service avec la désignation '{service.designation}' existe déjà")
+        
+        # Get next ID
+        cursor.execute("SELECT MAX(id) FROM Service")
+        max_id = cursor.fetchone()[0]
+        next_id = 1 if max_id is None else max_id + 1
+        
+        # Insert the new service
+        cursor.execute("""
+            INSERT INTO Service (id, designation, incineration)
+            VALUES (?, ?, ?)
+        """, (
+            next_id,
+            service.designation,
+            service.incineration
+        ))
+        
+        conn.commit()
+        
+        # Return the created service with its ID
+        return {**service.dict(), "id": next_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error creating service: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.put("/api/services/{service_id}", response_model=Service)
+async def update_service(service_id: int, service: Service, conn = Depends(get_db)):
+    """Update an existing service."""
+    try:
+        cursor = conn.cursor()
+        
+        # Check if service exists
+        cursor.execute("SELECT id FROM Service WHERE id = ?", (service_id,))
+        if cursor.fetchone() is None:
+            raise HTTPException(status_code=404, detail=f"Service avec ID {service_id} non trouvé")
+        
+        # Check for unique designation (excluding current service)
+        cursor.execute("SELECT id FROM Service WHERE designation = ? AND id != ?", 
+                      (service.designation, service_id))
+        if cursor.fetchone() is not None:
+            raise HTTPException(status_code=400, detail=f"Un service avec la désignation '{service.designation}' existe déjà")
+        
+        # Update the service
+        cursor.execute("""
+            UPDATE Service
+            SET designation = ?, incineration = ?
+            WHERE id = ?
+        """, (
+            service.designation,
+            service.incineration,
+            service_id
+        ))
+        
+        conn.commit()
+        
+        # Return the updated service
+        return {**service.dict(), "id": service_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error updating service {service_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.delete("/api/services/{service_id}")
+async def delete_service(service_id: int, conn = Depends(get_db)):
+    """Delete a service."""
+    try:
+        cursor = conn.cursor()
+        
+        # Check if service exists
+        cursor.execute("SELECT id FROM Service WHERE id = ?", (service_id,))
+        if cursor.fetchone() is None:
+            raise HTTPException(status_code=404, detail=f"Service avec ID {service_id} non trouvé")
+        
+        # Delete the service
+        cursor.execute("DELETE FROM Service WHERE id = ?", (service_id,))
+        conn.commit()
+        
+        return {"message": f"Service avec ID {service_id} supprimé avec succès"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error deleting service {service_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+# Fournisseur endpoints
+@app.get("/api/fournisseurs", response_model=List[Fournisseur])
+async def get_fournisseurs(conn = Depends(get_db)):
+    """Get all suppliers."""
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, nom, telephone, adresse FROM Fournisseur ORDER BY id")
+        rows = cursor.fetchall()
+        
+        fournisseurs = []
+        for row in rows:
+            fournisseurs.append({
+                "id": row[0],
+                "nom": row[1],
+                "telephone": row[2],
+                "adresse": row[3]
+            })
+        
+        return fournisseurs
+    except Exception as e:
+        print(f"Error fetching suppliers: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.get("/api/fournisseurs/{fournisseur_id}", response_model=Fournisseur)
+async def get_fournisseur(fournisseur_id: int, conn = Depends(get_db)):
+    """Get a single supplier by ID."""
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, nom, telephone, adresse FROM Fournisseur WHERE id = ?", (fournisseur_id,))
+        row = cursor.fetchone()
+        
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"Fournisseur avec ID {fournisseur_id} non trouvé")
+        
+        return {
+            "id": row[0],
+            "nom": row[1],
+            "telephone": row[2],
+            "adresse": row[3]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching supplier {fournisseur_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.post("/api/fournisseurs", response_model=Fournisseur)
+async def create_fournisseur(fournisseur: Fournisseur, conn = Depends(get_db)):
+    """Create a new supplier."""
+    try:
+        cursor = conn.cursor()
+        
+        # Check for unique name
+        cursor.execute("SELECT id FROM Fournisseur WHERE nom = ?", (fournisseur.nom,))
+        if cursor.fetchone() is not None:
+            raise HTTPException(status_code=400, detail=f"Un fournisseur avec le nom '{fournisseur.nom}' existe déjà")
+        
+        # Get next ID
+        cursor.execute("SELECT MAX(id) FROM Fournisseur")
+        max_id = cursor.fetchone()[0]
+        next_id = 1 if max_id is None else max_id + 1
+        
+        # Insert the new supplier
+        cursor.execute("""
+            INSERT INTO Fournisseur (id, nom, telephone, adresse)
+            VALUES (?, ?, ?, ?)
+        """, (
+            next_id,
+            fournisseur.nom,
+            fournisseur.telephone,
+            fournisseur.adresse
+        ))
+        
+        conn.commit()
+        
+        # Return the created supplier with its ID
+        return {**fournisseur.dict(), "id": next_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error creating supplier: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.put("/api/fournisseurs/{fournisseur_id}", response_model=Fournisseur)
+async def update_fournisseur(fournisseur_id: int, fournisseur: Fournisseur, conn = Depends(get_db)):
+    """Update an existing supplier."""
+    try:
+        cursor = conn.cursor()
+        
+        # Check if supplier exists
+        cursor.execute("SELECT id FROM Fournisseur WHERE id = ?", (fournisseur_id,))
+        if cursor.fetchone() is None:
+            raise HTTPException(status_code=404, detail=f"Fournisseur avec ID {fournisseur_id} non trouvé")
+        
+        # Check for unique name (excluding current supplier)
+        cursor.execute("SELECT id FROM Fournisseur WHERE nom = ? AND id != ?", 
+                      (fournisseur.nom, fournisseur_id))
+        if cursor.fetchone() is not None:
+            raise HTTPException(status_code=400, detail=f"Un fournisseur avec le nom '{fournisseur.nom}' existe déjà")
+        
+        # Update the supplier
+        cursor.execute("""
+            UPDATE Fournisseur
+            SET nom = ?, telephone = ?, adresse = ?
+            WHERE id = ?
+        """, (
+            fournisseur.nom,
+            fournisseur.telephone,
+            fournisseur.adresse,
+            fournisseur_id
+        ))
+        
+        conn.commit()
+        
+        # Return the updated supplier
+        return {**fournisseur.dict(), "id": fournisseur_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error updating supplier {fournisseur_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.delete("/api/fournisseurs/{fournisseur_id}")
+async def delete_fournisseur(fournisseur_id: int, conn = Depends(get_db)):
+    """Delete a supplier."""
+    try:
+        cursor = conn.cursor()
+        
+        # Check if supplier exists
+        cursor.execute("SELECT id FROM Fournisseur WHERE id = ?", (fournisseur_id,))
+        if cursor.fetchone() is None:
+            raise HTTPException(status_code=404, detail=f"Fournisseur avec ID {fournisseur_id} non trouvé")
+        
+        # Delete the supplier
+        cursor.execute("DELETE FROM Fournisseur WHERE id = ?", (fournisseur_id,))
+        conn.commit()
+        
+        return {"message": f"Fournisseur avec ID {fournisseur_id} supprimé avec succès"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error deleting supplier {fournisseur_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")

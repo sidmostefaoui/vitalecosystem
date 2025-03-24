@@ -20,6 +20,8 @@ import {
   LocalShipping as ShippingIcon,
   Storefront as FournisseursIcon,
   Receipt as BonsAchatsIcon,
+  Inventory as StockIcon,
+  Category as ProduitsServicesIcon,
 } from '@mui/icons-material';
 
 /**
@@ -59,10 +61,26 @@ const SubMenu = ({ title }) => {
       {
         title: 'Fournisseurs',
         icon: <FournisseursIcon sx={{ fontSize: 60 }} />,
+        onClick: () => navigate('/fournisseurs')
       },
       {
         title: 'Bons d\'achats',
         icon: <BonsAchatsIcon sx={{ fontSize: 60 }} />,
+      },
+    ];
+  }
+  // Specific submenu for Inventaire section with Produits et Services and Stock
+  else if (title === "Inventaire") {
+    menuItems = [
+      {
+        title: 'Produits et Services',
+        icon: <ProduitsServicesIcon sx={{ fontSize: 60 }} />,
+        onClick: () => navigate('/produits-services')
+      },
+      {
+        title: 'Stock',
+        icon: <StockIcon sx={{ fontSize: 60 }} />,
+        onClick: () => navigate('/stock')
       },
     ];
   }
