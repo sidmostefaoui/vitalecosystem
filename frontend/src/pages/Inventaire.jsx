@@ -1,26 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
   CircularProgress,
-  Stack
+  Stack,
+  Alert
 } from '@mui/material';
 import { DataGrid, frFR } from '@mui/x-data-grid';
 
 /**
- * Stock component - Displays a list of products in stock with quantities and prices
+ * Inventaire component - Displays a list of products in inventory with quantities and last prices
  */
-const Stock = () => {
-  const [loading, setLoading] = useState(false);
+const Inventaire = () => {
+  const [loading, setLoading] = useState(true);
+  const [inventory, setInventory] = useState([]);
+  const [error, setError] = useState(null);
   
-  // Sample data for the stock
-  const stockItems = [
-    { id: 1, produit: 'Sacs poubelle industriels 100L', qte: 250, prixAchat: 125.50 },
-    { id: 2, produit: 'Conteneurs plastiques 240L', qte: 35, prixAchat: 4500.00 },
-    { id: 3, produit: 'Gants de protection', qte: 100, prixAchat: 450.75 },
-    { id: 4, produit: 'Désinfectant industriel 5L', qte: 45, prixAchat: 1200.00 },
-    { id: 5, produit: 'Masques FFP2', qte: 500, prixAchat: 85.25 }
-  ];
+  useEffect(() => {
+    fetchInventory();
+  }, []);
+
+  const fetchInventory = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:8000/api/inventaire');
+      
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setInventory(data);
+      setError(null);
+    } catch (error) {
+      console.error('Erreur lors du chargement de l\'inventaire:', error);
+      setError(`Erreur lors du chargement de l'inventaire: ${error.message}`);
+      setInventory([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Define the columns for the DataGrid
   const columns = [
@@ -29,6 +48,7 @@ const Stock = () => {
       headerName: 'Produit', 
       width: 350,
       headerAlign: 'left',
+      flex: 1
     },
     { 
       field: 'qte', 
@@ -38,7 +58,7 @@ const Stock = () => {
       headerAlign: 'center',
     },
     { 
-      field: 'prixAchat', 
+      field: 'prix_dernier', 
       headerName: 'Prix d\'achat (Dernier)', 
       width: 220,
       align: 'right',
@@ -59,12 +79,18 @@ const Stock = () => {
     <Box sx={{ height: 600, width: '100%' }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-          Stock
+          Inventaire
         </Typography>
       </Stack>
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       <DataGrid
-        rows={stockItems}
+        rows={inventory}
         columns={columns}
         pageSize={10}
         rowsPerPageOptions={[10, 25, 50]}
@@ -83,4 +109,4 @@ const Stock = () => {
   );
 };
 
-export default Stock; 
+export default Inventaire; 

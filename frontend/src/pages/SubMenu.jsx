@@ -20,8 +20,6 @@ import {
   LocalShipping as ShippingIcon,
   Storefront as FournisseursIcon,
   Receipt as BonsAchatsIcon,
-  Inventory as StockIcon,
-  Category as ProduitsServicesIcon,
 } from '@mui/icons-material';
 
 /**
@@ -55,6 +53,10 @@ const SubMenu = ({ title }) => {
       },
     ];
   } 
+  // Empty submenu for Régime Réel
+  else if (title === "Régime Réel") {
+    menuItems = [];
+  }
   // Specific submenu for Achats section with Fournisseurs and Bons d'achats
   else if (title === "Achats") {
     menuItems = [
@@ -66,76 +68,9 @@ const SubMenu = ({ title }) => {
       {
         title: 'Bons d\'achats',
         icon: <BonsAchatsIcon sx={{ fontSize: 60 }} />,
+        onClick: () => navigate('/bon-achats')
       },
     ];
-  }
-  // Specific submenu for Inventaire section with Produits et Services and Stock
-  else if (title === "Inventaire") {
-    menuItems = [
-      {
-        title: 'Produits et Services',
-        icon: <ProduitsServicesIcon sx={{ fontSize: 60 }} />,
-        onClick: () => navigate('/produits-services')
-      },
-      {
-        title: 'Stock',
-        icon: <StockIcon sx={{ fontSize: 60 }} />,
-        onClick: () => navigate('/stock')
-      },
-    ];
-  }
-  // For Agents section, we'll render a different UI with a button to the list
-  else if (title === "Agents") {
-    // We'll handle this differently below
-    menuItems = [];
-  }
-  else {
-    // Default submenu options for other sections
-    menuItems = [
-      {
-        title: 'Gérer',
-        icon: <ListIcon sx={{ fontSize: 60 }} />,
-      },
-      {
-        title: 'Ajouter',
-        icon: <AddIcon sx={{ fontSize: 60 }} />,
-      },
-      {
-        title: 'Rapports',
-        icon: <ChartIcon sx={{ fontSize: 60 }} />,
-      },
-      {
-        title: 'Historique',
-        icon: <HistoryIcon sx={{ fontSize: 60 }} />,
-      },
-      {
-        title: 'Documents',
-        icon: <ArticleIcon sx={{ fontSize: 60 }} />,
-      },
-      {
-        title: 'Paramètres',
-        icon: <SettingsIcon sx={{ fontSize: 60 }} />,
-      },
-    ];
-  }
-
-  // Special case for Agents section - redirect immediately to agents list
-  useEffect(() => {
-    if (title === "Agents") {
-      navigate('/agents-list');
-    }
-  }, [title, navigate]);
-
-  // If we're on the Agents page, we don't actually render anything
-  // since we redirect, but we'll return a loading state
-  if (title === "Agents") {
-    return (
-      <Box sx={{ p: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 4 }}>
-          {title}
-        </Typography>
-      </Box>
-    );
   }
 
   return (

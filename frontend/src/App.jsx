@@ -17,9 +17,10 @@ import Dashboard from './pages/Dashboard';
 import Clients from './pages/Clients';
 import Agents from './pages/Agents';
 import SubMenu from './pages/SubMenu';
-import Stock from './pages/Stock';
 import Produits_Services from './pages/Produits_Services';
 import Fournisseurs from './pages/Fournisseurs';
+import Bon_Achats from './pages/Bon_Achats';
+import Inventaire from './pages/Inventaire';
 import { theme } from './theme';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -43,19 +44,10 @@ function AppContent() {
    */
   const handleReturn = () => {
     if (location.pathname === '/clients') {
-      // If on clients page, go back to Régime Forfait menu
-      navigate('/régime-forfait');
-    } else if (location.pathname === '/agents-list') {
-      // If on agents-list page, go back to dashboard since Agents redirects
-      navigate('/dashboard');
-    } else if (location.pathname === '/stock' || location.pathname === '/produits-services') {
-      // If on stock or produits-services page, go back to Inventaire menu
-      navigate('/inventaire');
-    } else if (location.pathname === '/fournisseurs') {
-      // If on fournisseurs page, go back to Achats menu
+      navigate('/regime-forfait');
+    } else if (location.pathname === '/fournisseurs' || location.pathname === '/bon-achats') {
       navigate('/achats');
     } else {
-      // Otherwise go back to dashboard
       navigate('/dashboard');
     }
   };
@@ -95,14 +87,14 @@ function AppContent() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/agents-list" element={<Agents />} />
-          <Route path="/régime-forfait" element={<SubMenu title="Régime Forfait" />} />
-          <Route path="/régime-réel" element={<SubMenu title="Régime Réel" />} />
-          <Route path="/inventaire" element={<SubMenu title="Inventaire" />} />
+          <Route path="/regime-forfait" element={<SubMenu title="Régime Forfait" />} />
+          <Route path="/regime-réel" element={<SubMenu title="Régime Réel" />} />
           <Route path="/achats" element={<SubMenu title="Achats" />} />
-          <Route path="/agents" element={<SubMenu title="Agents" />} />
-          <Route path="/stock" element={<Stock />} />
+          <Route path="/agents" element={<Agents />} />
           <Route path="/produits-services" element={<Produits_Services />} />
+          <Route path="/inventaire" element={<Inventaire />} />
           <Route path="/fournisseurs" element={<Fournisseurs />} />
+          <Route path="/bon-achats" element={<Bon_Achats />} />
           <Route path="/" element={<Navigate replace to="/dashboard" />} />
         </Routes>
       </Container>

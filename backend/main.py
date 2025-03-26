@@ -18,7 +18,10 @@ def get_db():
     
     # Add check_same_thread=False to allow SQLite connections across different threads
     conn = sqlite3.connect(db_path, check_same_thread=False)
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA foreign_keys = ON;")
     conn.row_factory = sqlite3.Row  # This enables column access by name
+    
     try:
         yield conn
     finally:
@@ -175,6 +178,73 @@ class Fournisseur(BaseModel):
     nom: str
     telephone: str
     adresse: str
+
+# Bon_Achats model
+class BonAchats(BaseModel):
+    """Bon d'achats model"""
+    id: Optional[int] = None
+    date: str
+    fournisseur: str
+    montant_total: float = 0
+    montant_verse: float = 0
+
+    @validator('date')
+    def validate_date(cls, v):
+        try:
+            datetime.strptime(v, '%d/%m/%Y')
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Format de date invalide. Utilisez le format dd/mm/yyyy"
+            )
+        return v
+
+# Produit_Bon_Achat model
+class ProduitBonAchat(BaseModel):
+    """Produit bon d'achat model"""
+    id: Optional[int] = None
+    produit: str
+    qte: int
+    prix: Optional[float] = None
+    bon_achat_id: int
+
+    @validator('qte')
+    def validate_qte(cls, v):
+        if v <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="La quantité doit être supérieure à 0"
+            )
+        return v
+
+    @validator('prix')
+    def validate_prix(cls, v):
+        if v is not None and v <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Le prix doit être supérieur à 0"
+            )
+        return v
+
+# Inventaire model
+class Inventaire(BaseModel):
+    """Inventaire model"""
+    id: Optional[int] = None
+    produit: str
+    qte: int
+    prix_dernier: float
+
+    @validator('qte')
+    def validate_qte(cls, v):
+        if v <= 0:
+            raise HTTPException(status_code=400, detail="La quantité doit être supérieure à 0")
+        return v
+
+    @validator('prix_dernier')
+    def validate_prix(cls, v):
+        if v <= 0:
+            raise HTTPException(status_code=400, detail="Le prix doit être supérieur à 0")
+        return v
 
 # API Endpoints
 @app.get("/api/dashboard/stats")
@@ -691,22 +761,300 @@ async def update_fournisseur(fournisseur_id: int, fournisseur: Fournisseur, conn
 
 @app.delete("/api/fournisseurs/{fournisseur_id}")
 async def delete_fournisseur(fournisseur_id: int, conn = Depends(get_db)):
-    """Delete a supplier."""
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM Fournisseur WHERE id = ?", (fournisseur_id,))
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Fournisseur non trouvé")
+        conn.commit()
+        return {"message": "Fournisseur supprimé avec succès"}
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Bon d'achats endpoints
+@app.get("/api/bon-achats", response_model=List[BonAchats])
+async def get_bon_achats(conn = Depends(get_db)):
+    """Get all bon d'achats"""
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Bon_Achats ORDER BY date DESC")
+        bon_achats = cursor.fetchall()
+        return [dict(row) for row in bon_achats]
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/bon-achats/{bon_id}", response_model=BonAchats)
+async def get_bon_achat(bon_id: int, conn = Depends(get_db)):
+    """Get a specific bon d'achat by ID"""
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Bon_Achats WHERE id = ?", (bon_id,))
+        bon = cursor.fetchone()
+        if bon is None:
+            raise HTTPException(status_code=404, detail="Bon d'achat non trouvé")
+        return dict(bon)
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/bon-achats", response_model=BonAchats)
+async def create_bon_achat(bon: BonAchats, id: Optional[int] = None, conn = Depends(get_db)):
+    """Create a new bon d'achat with optional ID for recreating after deletion"""
     try:
         cursor = conn.cursor()
         
-        # Check if supplier exists
-        cursor.execute("SELECT id FROM Fournisseur WHERE id = ?", (fournisseur_id,))
-        if cursor.fetchone() is None:
-            raise HTTPException(status_code=404, detail=f"Fournisseur avec ID {fournisseur_id} non trouvé")
+        if id:
+            # When recreating with specific ID (for update via delete and recreate)
+            cursor.execute(
+                "INSERT INTO Bon_Achats (id, date, fournisseur, montant_total, montant_verse) VALUES (?, ?, ?, ?, ?) RETURNING *",
+                (id, bon.date, bon.fournisseur, bon.montant_total, bon.montant_verse)
+            )
+        else:
+            # Normal creation with auto-incremented ID
+            cursor.execute(
+                "INSERT INTO Bon_Achats (date, fournisseur, montant_total, montant_verse) VALUES (?, ?, ?, ?) RETURNING *",
+                (bon.date, bon.fournisseur, bon.montant_total, bon.montant_verse)
+            )
+            
+        new_bon = cursor.fetchone()
+        conn.commit()
+        return dict(new_bon)
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/bon-achats/{bon_id}", response_model=BonAchats)
+async def update_bon_achat(bon_id: int, bon: BonAchats, conn = Depends(get_db)):
+    """Update a bon d'achat"""
+    try:
+        cursor = conn.cursor()
         
-        # Delete the supplier
-        cursor.execute("DELETE FROM Fournisseur WHERE id = ?", (fournisseur_id,))
+        # First get the current bon d'achat to check if it exists
+        cursor.execute("SELECT id FROM Bon_Achats WHERE id = ?", (bon_id,))
+        if cursor.fetchone() is None:
+            raise HTTPException(status_code=404, detail="Bon d'achat non trouvé")
+            
+        # Update the bon d'achat
+        cursor.execute(
+            "UPDATE Bon_Achats SET date = ?, fournisseur = ?, montant_total = ?, montant_verse = ? WHERE id = ? RETURNING *",
+            (bon.date, bon.fournisseur, bon.montant_total, bon.montant_verse, bon_id)
+        )
+        updated_bon = cursor.fetchone()
         conn.commit()
         
-        return {"message": f"Fournisseur avec ID {fournisseur_id} supprimé avec succès"}
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Error deleting supplier {fournisseur_id}: {str(e)}")
+        return dict(updated_bon)
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/bon-achats/{bon_id}")
+async def delete_bon_achat(bon_id: int, conn = Depends(get_db)):
+    """Delete a bon d'achat"""
+    try:
+        cursor = conn.cursor()
+        
+        # First, get all products associated with this bon d'achat
+        cursor.execute("SELECT produit, qte FROM Produits_Bon_Achat WHERE bon_achat_id = ?", (bon_id,))
+        products = cursor.fetchall()
+        
+        if not products:
+            # No products found, just delete the bon d'achat
+            cursor.execute("DELETE FROM Bon_Achats WHERE id = ?", (bon_id,))
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Bon d'achat non trouvé")
+        else:
+            # Update inventory for each product
+            for product in products:
+                produit_name = product[0]
+                qte_to_remove = product[1]
+                
+                # Get current inventory
+                cursor.execute("SELECT id, qte FROM Inventaire WHERE produit = ?", (produit_name,))
+                inventory_item = cursor.fetchone()
+                
+                if inventory_item:
+                    inventory_id = inventory_item[0]
+                    current_qte = inventory_item[1]
+                    
+                    # Calculate new quantity
+                    new_qte = current_qte - qte_to_remove
+                    
+                    if new_qte <= 0:
+                        # If new quantity would be zero or negative, delete the inventory item
+                        cursor.execute("DELETE FROM Inventaire WHERE id = ?", (inventory_id,))
+                    else:
+                        # Otherwise update the quantity
+                        cursor.execute("UPDATE Inventaire SET qte = ? WHERE id = ?", (new_qte, inventory_id))
+            
+            # Now delete the bon d'achat (cascade will delete its products)
+            cursor.execute("DELETE FROM Bon_Achats WHERE id = ?", (bon_id,))
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Bon d'achat non trouvé")
+        
+        conn.commit()
+        return {"message": "Bon d'achat supprimé avec succès"}
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# API Endpoints for Produits_Bon_Achat
+@app.get("/api/bon-achats/{bon_id}/produits", response_model=List[ProduitBonAchat])
+async def get_produits_bon_achat(bon_id: int, conn = Depends(get_db)):
+    """Get all products for a specific bon d'achat"""
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM Produits_Bon_Achat WHERE bon_achat_id = ? ORDER BY id",
+            (bon_id,)
+        )
+        produits = cursor.fetchall()
+        return [dict(row) for row in produits]
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/bon-achats/{bon_id}/produits/{produit_id}", response_model=ProduitBonAchat)
+async def get_produit_bon_achat(bon_id: int, produit_id: int, conn = Depends(get_db)):
+    """Get a specific product from a bon d'achat"""
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM Produits_Bon_Achat WHERE id = ? AND bon_achat_id = ?",
+            (produit_id, bon_id)
+        )
+        produit = cursor.fetchone()
+        if produit is None:
+            raise HTTPException(status_code=404, detail="Produit non trouvé")
+        return dict(produit)
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/bon-achats/{bon_id}/produits", response_model=ProduitBonAchat)
+async def create_produit_bon_achat(bon_id: int, produit: ProduitBonAchat, conn = Depends(get_db)):
+    """Add a new product to a bon d'achat"""
+    try:
+        # Verify that the bon_achat exists
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM Bon_Achats WHERE id = ?", (bon_id,))
+        if cursor.fetchone() is None:
+            raise HTTPException(status_code=404, detail="Bon d'achat non trouvé")
+
+        # Insert the new product
+        cursor.execute(
+            """
+            INSERT INTO Produits_Bon_Achat (produit, qte, prix, bon_achat_id)
+            VALUES (?, ?, ?, ?) RETURNING *
+            """,
+            (produit.produit, produit.qte, produit.prix, bon_id)
+        )
+        new_produit = cursor.fetchone()
+        
+        # Update inventory
+        # Check if product exists in inventory
+        cursor.execute("SELECT id, qte, prix_dernier FROM Inventaire WHERE produit = ?", (produit.produit,))
+        existing_product = cursor.fetchone()
+        
+        if existing_product:
+            # Product exists, update quantity and price
+            product_id = existing_product[0]
+            new_qte = existing_product[1] + produit.qte
+            
+            cursor.execute(
+                "UPDATE Inventaire SET qte = ?, prix_dernier = ? WHERE id = ?",
+                (new_qte, produit.prix or existing_product[2], product_id)
+            )
+        else:
+            # Product doesn't exist, add it to inventory
+            if produit.prix:  # Only add to inventory if price is provided
+                cursor.execute(
+                    "INSERT INTO Inventaire (produit, qte, prix_dernier) VALUES (?, ?, ?)",
+                    (produit.produit, produit.qte, produit.prix)
+                )
+        
+        conn.commit()
+        return dict(new_produit)
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/bon-achats/{bon_id}/produits/{produit_id}", response_model=ProduitBonAchat)
+async def update_produit_bon_achat(
+    bon_id: int,
+    produit_id: int,
+    produit: ProduitBonAchat,
+    conn = Depends(get_db)
+):
+    """Update a product in a bon d'achat"""
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            UPDATE Produits_Bon_Achat 
+            SET produit = ?, qte = ?, prix = ?
+            WHERE id = ? AND bon_achat_id = ?
+            RETURNING *
+            """,
+            (produit.produit, produit.qte, produit.prix, produit_id, bon_id)
+        )
+        updated_produit = cursor.fetchone()
+        if updated_produit is None:
+            raise HTTPException(status_code=404, detail="Produit non trouvé")
+        conn.commit()
+        return dict(updated_produit)
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/bon-achats/{bon_id}/produits/{produit_id}")
+async def delete_produit_bon_achat(bon_id: int, produit_id: int, conn = Depends(get_db)):
+    """Delete a product from a bon d'achat"""
+    try:
+        cursor = conn.cursor()
+        
+        # First get the product details
+        cursor.execute(
+            "SELECT produit, qte FROM Produits_Bon_Achat WHERE id = ? AND bon_achat_id = ?",
+            (produit_id, bon_id)
+        )
+        product = cursor.fetchone()
+        
+        if product is None:
+            raise HTTPException(status_code=404, detail="Produit non trouvé")
+            
+        produit_name = product[0]
+        qte_to_remove = product[1]
+        
+        # Update inventory
+        cursor.execute("SELECT id, qte FROM Inventaire WHERE produit = ?", (produit_name,))
+        inventory_item = cursor.fetchone()
+        
+        if inventory_item:
+            inventory_id = inventory_item[0]
+            current_qte = inventory_item[1]
+            
+            # Calculate new quantity
+            new_qte = current_qte - qte_to_remove
+            
+            if new_qte <= 0:
+                # If new quantity would be zero or negative, delete the inventory item
+                cursor.execute("DELETE FROM Inventaire WHERE id = ?", (inventory_id,))
+            else:
+                # Otherwise update the quantity
+                cursor.execute("UPDATE Inventaire SET qte = ? WHERE id = ?", (new_qte, inventory_id))
+        
+        # Now delete the product
+        cursor.execute(
+            "DELETE FROM Produits_Bon_Achat WHERE id = ? AND bon_achat_id = ?",
+            (produit_id, bon_id)
+        )
+        
+        conn.commit()
+        return {"message": "Produit supprimé avec succès"}
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Inventaire endpoint
+@app.get("/api/inventaire", response_model=List[Inventaire])
+async def get_inventaire(conn = Depends(get_db)):
+    """Get all inventory items"""
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Inventaire ORDER BY produit")
+        items = cursor.fetchall()
+        return [dict(item) for item in items]
+    except sqlite3.Error as e:
+        print(f"Error fetching inventory: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")

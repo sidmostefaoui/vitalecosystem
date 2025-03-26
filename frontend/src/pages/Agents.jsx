@@ -68,9 +68,9 @@ const Agents = () => {
   // Define the columns for the DataGrid
   const columns = [
     { field: 'id', headerName: 'ID', width: 70 },
-    { field: 'nom', headerName: 'Nom', width: 200 },
-    { field: 'telephone', headerName: 'Téléphone', width: 150 },
-    { field: 'whatsapp', headerName: 'Whatsapp', width: 150 },
+    { field: 'nom', headerName: 'Nom', width: 300 },
+    { field: 'telephone', headerName: 'Téléphone', width: 200 },
+    { field: 'whatsapp', headerName: 'Whatsapp', width: 200 },
     { field: 'gps', headerName: 'GPS', width: 250 },
     { 
       field: 'regime', 
@@ -81,14 +81,15 @@ const Agents = () => {
     { 
       field: 'notification', 
       headerName: 'Notifications', 
-      width: 130,
+      width: 30,
+      flex: 1,
       valueFormatter: (params) => params.value || 'Actif'
     },
     { 
       field: 'actions', 
       type: 'actions',
       headerName: 'Actions', 
-      width: 100,
+      width: 150,
       pinned: 'right',
       getActions: (params) => [
         <GridActionsCellItem
@@ -356,23 +357,25 @@ const Agents = () => {
           {error}
         </Alert>
       )}
-
-      <DataGrid
-        rows={agents}
-        columns={columns}
-        pageSize={10}
-        rowsPerPageOptions={[10, 25, 50]}
-        autoHeight
-        disableRowSelectionOnClick
-        disableColumnSelector
-        hideFooterSelectedRowCount
-        localeText={frFR.components.MuiDataGrid.defaultProps.localeText}
-        sx={{
-          '& .MuiDataGrid-columnHeaderTitle': {
-            fontWeight: 'bold',
-          }
-        }}
-      />
+      
+      <Box sx={{ height: 600, width: '100%' }}>
+        <DataGrid
+          rows={agents}
+          columns={columns}
+          pageSize={10}
+          rowsPerPageOptions={[10, 25, 50]}
+          autoHeight
+          disableRowSelectionOnClick
+          disableColumnSelector
+          hideFooterSelectedRowCount
+          localeText={frFR.components.MuiDataGrid.defaultProps.localeText}
+          sx={{
+            '& .MuiDataGrid-columnHeaderTitle': {
+              fontWeight: 'bold',
+            }
+          }}
+        />
+      </Box>
 
       {/* Add Agent Dialog */}
       <Dialog open={isAddingAgent} onClose={() => setIsAddingAgent(false)} maxWidth="md" fullWidth>
