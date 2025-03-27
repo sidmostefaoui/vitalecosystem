@@ -208,19 +208,36 @@ CREATE TABLE Versement_Bon_Achat (
 )
 ''')
 
-# Sample data for versement_bon_achat
-versement_bon_achat_data = [
-    (1, 5000.00, 'Chèque', 1),
-    (2, 3000.00, 'Espèce', 2),
-    (3, 20000.00, 'Chèque', 3),
-    (4, 15000.00, 'Espèce', 4),
-    (5, 2000.00, 'Chèque', 5)
+
+# Create Client table
+cursor.execute('DROP TABLE IF EXISTS Client')
+cursor.execute('''
+CREATE TABLE Client (
+    id INTEGER PRIMARY KEY,
+    nom TEXT NOT NULL,
+    specialite TEXT,
+    tel TEXT NOT NULL,
+    mode INTEGER NOT NULL CHECK (mode IN (30, 60, 90)),
+    agent TEXT NOT NULL,
+    etat_contrat TEXT NOT NULL CHECK (etat_contrat IN ('Actif', 'En Pause', 'Terminé')),
+    debut_contrat TEXT NOT NULL,
+    fin_contrat TEXT NOT NULL
+)
+''')
+
+# Sample data for clients
+client_data = [
+    (1, 'Algérie Telecom', 'Télécommunications', '023456789', 30, 'Ahmed Kader', 'Actif', '01/01/2024', '31/12/2024'),
+    (2, 'SEAAL', 'Services des eaux', '021234567', 60, 'Samira Boumediene', 'Actif', '15/02/2024', '14/02/2025'),
+    (3, 'Clinique El Azhar', 'Santé', '0555123456', 90, 'Karim Benali', 'En Pause', '01/03/2024', '28/02/2025'),
+    (4, 'El Watan', 'Presse', '0661234567', 30, 'Ahmed Kader', 'Terminé', '01/01/2023', '31/12/2023'),
+    (5, 'Air Algérie', 'Transport aérien', '021987654', 60, 'Samira Boumediene', 'Actif', '01/04/2024', '31/03/2025')
 ]
 
 cursor.executemany('''
-INSERT INTO Versement_Bon_Achat (id, montant, type, bon_achat_id)
-VALUES (?, ?, ?, ?)
-''', versement_bon_achat_data)
+INSERT INTO Client (id, nom, specialite, tel, mode, agent, etat_contrat, debut_contrat, fin_contrat)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+''', client_data)
 
 # Commit the changes and close the connection
 conn.commit()

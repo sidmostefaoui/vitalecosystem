@@ -1,9 +1,14 @@
+"""FastAPI backend for VITALECOSYSTEM's internal management system."""
+
+import re
 import sqlite3
 import os
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from models import *
+from pydantic import BaseModel, validator, Field
+from datetime import date, datetime
 
 # Database connection setup
 def get_db():
@@ -24,6 +29,15 @@ def get_db():
         conn.close()
 
 app = FastAPI()
+
+# Configuration CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def recalculate_montant_verse(bon_id: int, cursor):
     """Recalculate the total montant_verse for a bon d'achat based on versements"""
@@ -974,3 +988,102 @@ async def delete_versement_bon_achat(bon_id: int, versement_id: int, conn = Depe
         return {"message": "Versement supprimé avec succès"}
     except sqlite3.Error as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Client endpoints
+@app.get("/api/clients", response_model=List[ClientModel])
+async def get_clients(conn = Depends(get_db)):
+    """Get all clients."""
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Client ORDER BY nom")
+        clients = cursor.fetchall()
+        
+        # Convert to list of dicts for Pydantic model
+        return [dict(client) for client in clients]
+    except Exception as e:
+        # Log the error for server-side debugging
+        print(f"Error fetching clients: {str(e)}")
+        # Return a user-friendly error
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.get("/api/clients/{client_id}", response_model=ClientModel)
+async def get_client(client_id: int, conn = Depends(get_db)):
+    """Get a specific client by ID."""
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Client WHERE id = ?", (client_id,))
+        client = cursor.fetchone()
+        
+        if client is None:
+            raise HTTPException(status_code=404, detail=f"Client avec ID {client_id} non trouvé")
+        
+        return dict(client)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching client {client_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.post("/api/clients", response_model=ClientModel)
+async def create_client(client: ClientModel, conn = Depends(get_db)):
+    """Create a new client."""
+    try:
+        cursor = conn.cursor()
+        
+        # Check for unique name
+        cursor.execute("SELECT id FROM Client WHERE nom = ?", (client.nom,))
+        if cursor.fetchone() is not None:
+            raise HTTPException(status_code=400, detail=f"Un client avec le nom '{client.nom}' existe déjà")
+        
+        # Get next ID
+        cursor.execute("SELECT MAX(id) FROM Client")
+        max_id = cursor.fetchone()[0]
+        next_id = 1 if max_id is None else max_id + 1
+        
+        # Insert the new client
+        cursor.execute("""
+            INSERT INTO Client (id, nom, specialite, tel, mode, agent, etat_contrat, debut_contrat, fin_contrat)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            next_id,
+            client.nom,
+            client.specialite,
+            client.tel,
+            client.mode,
+            client.agent,
+            client.etat_contrat,
+            client.debut_contrat,
+            client.fin_contrat
+        ))
+        
+        conn.commit()
+        
+        # Return the created client with its ID
+        return {**client.dict(), "id": next_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error creating client: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.delete("/api/clients/{client_id}")
+async def delete_client(client_id: int, conn = Depends(get_db)):
+    """Delete a client."""
+    try:
+        cursor = conn.cursor()
+        
+        # Check if client exists
+        cursor.execute("SELECT id FROM Client WHERE id = ?", (client_id,))
+        if cursor.fetchone() is None:
+            raise HTTPException(status_code=404, detail=f"Client avec ID {client_id} non trouvé")
+        
+        # Delete the client
+        cursor.execute("DELETE FROM Client WHERE id = ?", (client_id,))
+        conn.commit()
+        
+        return {"message": f"Client avec ID {client_id} supprimé avec succès"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error deleting client {client_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")

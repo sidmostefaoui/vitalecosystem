@@ -215,3 +215,45 @@ class VersementBonAchat(BaseModel):
                 detail=f"Le type de versement doit être l'un des suivants: {', '.join(valid_types)}"
             )
         return v
+
+# Client model for the new Client table
+class ClientModel(BaseModel):
+    """Client model"""
+    id: Optional[int] = None
+    nom: str
+    specialite: Optional[str] = None
+    tel: str
+    mode: int
+    agent: str
+    etat_contrat: str
+    debut_contrat: str
+    fin_contrat: str
+    
+    @validator('tel')
+    def validate_tel(cls, v):
+        if not re.match(r'^0\d{8,9}$', v):
+            raise HTTPException(status_code=400, detail="Le numéro de téléphone doit commencer par 0 et contenir 9 ou 10 chiffres")
+        return v
+    
+    @validator('mode')
+    def validate_mode(cls, v):
+        valid_modes = [30, 60, 90]
+        if v not in valid_modes:
+            raise HTTPException(status_code=400, detail=f"Le mode doit être l'un des suivants: {', '.join(map(str, valid_modes))}")
+        return v
+    
+    @validator('etat_contrat')
+    def validate_etat_contrat(cls, v):
+        valid_etats = ['Actif', 'En Pause', 'Terminé']
+        if v not in valid_etats:
+            raise HTTPException(status_code=400, detail=f"L'état du contrat doit être l'un des suivants: {', '.join(valid_etats)}")
+        return v
+    
+    @validator('debut_contrat', 'fin_contrat')
+    def validate_date(cls, v):
+        # Validate date format dd/mm/yyyy
+        try:
+            datetime.strptime(v, '%d/%m/%Y')
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Format de date invalide. Utilisez le format dd/mm/yyyy")
+        return v
