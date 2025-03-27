@@ -19,7 +19,8 @@ import {
   TableHead,
   TableRow,
   Paper,
-  InputAdornment
+  InputAdornment,
+  MenuItem
 } from '@mui/material';
 import { DataGrid, frFR, GridActionsCellItem } from '@mui/x-data-grid';
 import {
@@ -45,7 +46,8 @@ const Bon_Achats = () => {
   const [formData, setFormData] = useState({
     date: new Date(),
     fournisseur: '',
-    produits: [{ produit: '', qte: '', prix: '', isEditing: true }]
+    produits: [{ produit: '', qte: '', prix: '', isEditing: true }],
+    versements: []
   });
   const [loading, setLoading] = useState(true);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -53,7 +55,8 @@ const Bon_Achats = () => {
   const [editableFields, setEditableFields] = useState({
     date: false,
     fournisseur: false,
-    produits: false
+    produits: false,
+    versements: false
   });
 
   useEffect(() => {
@@ -105,27 +108,32 @@ const Bon_Achats = () => {
     if (bon) {
       setSelectedBon(bon);
       fetchBonAchatProducts(bon.id);
+      fetchBonAchatVersements(bon.id);
       setFormData({
         date: new Date(bon.date.split('/').reverse().join('-')),
         fournisseur: bon.fournisseur,
-        produits: []
+        produits: [],
+        versements: []
       });
       setEditableFields({
         date: false,
         fournisseur: false,
-        produits: false
+        produits: false,
+        versements: false
       });
     } else {
       setSelectedBon(null);
       setFormData({
         date: new Date(),
         fournisseur: '',
-        produits: [{ produit: '', qte: '', prix: '', isEditing: true }]
+        produits: [{ produit: '', qte: '', prix: '', isEditing: true }],
+        versements: []
       });
       setEditableFields({
         date: true,
         fournisseur: true,
-        produits: true
+        produits: true,
+        versements: true
       });
     }
     setOpenDialog(true);
@@ -152,6 +160,29 @@ const Bon_Achats = () => {
     }
   };
 
+  const fetchBonAchatVersements = async (bonId) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/bon-achats/${bonId}/versements`);
+      if (!response.ok) throw new Error('Erreur lors du chargement des versements du bon d\'achat');
+      
+      const data = await response.json();
+      console.log('Versements loaded:', data);
+      
+      setFormData(prev => ({
+        ...prev,
+        versements: data.map(v => ({ 
+          id: v.id,
+          montant: v.montant.toString(), 
+          type: v.type,
+          isEditing: false
+        }))
+      }));
+    } catch (error) {
+      console.error('Erreur:', error);
+      showSnackbar('Erreur lors du chargement des versements du bon d\'achat', 'error');
+    }
+  };
+
   const toggleFieldEditability = (field) => {
     setEditableFields({
       ...editableFields,
@@ -165,7 +196,8 @@ const Bon_Achats = () => {
     setFormData({
       date: new Date(),
       fournisseur: '',
-      produits: [{ produit: '', qte: '', prix: '', isEditing: true }]
+      produits: [{ produit: '', qte: '', prix: '', isEditing: true }],
+      versements: []
     });
   };
 
@@ -194,6 +226,31 @@ const Bon_Achats = () => {
       .toFixed(2);
   };
 
+  const handleVersementChange = (index, field, value) => {
+    const newVersements = [...formData.versements];
+    newVersements[index][field] = value;
+    setFormData({ ...formData, versements: newVersements });
+  };
+
+  const handleAddVersement = () => {
+    setFormData({
+      ...formData,
+      versements: [...formData.versements, { montant: '', type: 'Espèce', isEditing: true }]
+    });
+  };
+
+  const handleDeleteVersement = (index) => {
+    const newVersements = formData.versements.filter((_, i) => i !== index);
+    setFormData({ ...formData, versements: newVersements });
+  };
+
+  const calculateTotalVersements = () => {
+    return formData.versements
+      .filter(v => v.montant)
+      .reduce((sum, v) => sum + parseFloat(v.montant), 0)
+      .toFixed(2);
+  };
+
   const handleSubmit = async () => {
     try {
       if (!formData.fournisseur) {
@@ -213,41 +270,65 @@ const Bon_Achats = () => {
         return;
       }
 
-      const formattedDate = format(formData.date, 'dd/MM/yyyy');
+      // Check if versements total exceeds montant_total
+      const totalVersements = parseFloat(calculateTotalVersements());
       const totalAmount = parseFloat(calculateTotal());
+      
+      if (totalVersements > totalAmount) {
+        showSnackbar('Le total des versements ne peut pas dépasser le montant total', 'error');
+        return;
+      }
+
+      const formattedDate = format(formData.date, 'dd/MM/yyyy');
       
       const bonData = {
         date: formattedDate,
         fournisseur: formData.fournisseur,
         montant_total: totalAmount,
-        montant_verse: 0
+        montant_verse: totalVersements
       };
 
       let bonId;
 
       if (selectedBon) {
-        // When editing, delete the old bon d'achat first
+        // When editing, keep track of the ID
         bonId = selectedBon.id;
 
-        // Delete the existing bon d'achat
-        const deleteResponse = await fetch(`http://localhost:8000/api/bon-achats/${bonId}`, {
-          method: 'DELETE',
-        });
-
-        if (!deleteResponse.ok) throw new Error('Erreur lors de la suppression du bon d\'achat');
-
-        // Create a new bon d'achat with the same ID
-        const createResponse = await fetch(`http://localhost:8000/api/bon-achats?id=${bonId}`, {
-          method: 'POST',
+        // Update the existing bon d'achat instead of delete-recreate
+        const updateResponse = await fetch(`http://localhost:8000/api/bon-achats/${bonId}`, {
+          method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(bonData),
         });
 
-        if (!createResponse.ok) throw new Error('Erreur lors de la recréation du bon d\'achat');
+        if (!updateResponse.ok) throw new Error('Erreur lors de la mise à jour du bon d\'achat');
         
-        await createResponse.json();
+        // Get all existing versements
+        const versementsResponse = await fetch(`http://localhost:8000/api/bon-achats/${bonId}/versements`);
+        if (versementsResponse.ok) {
+          const existingVersements = await versementsResponse.json();
+          
+          // Delete all existing versements
+          for (const versement of existingVersements) {
+            await fetch(`http://localhost:8000/api/bon-achats/${bonId}/versements/${versement.id}`, {
+              method: 'DELETE',
+            });
+          }
+        }
+        
+        // Delete all existing products (they will be re-added)
+        const produitsResponse = await fetch(`http://localhost:8000/api/bon-achats/${bonId}/produits`);
+        if (produitsResponse.ok) {
+          const existingProduits = await produitsResponse.json();
+          
+          for (const produit of existingProduits) {
+            await fetch(`http://localhost:8000/api/bon-achats/${bonId}/produits/${produit.id}`, {
+              method: 'DELETE',
+            });
+          }
+        }
       } else {
         // Adding a new bon d'achat
         const response = await fetch('http://localhost:8000/api/bon-achats', {
@@ -279,6 +360,41 @@ const Bon_Achats = () => {
             bon_achat_id: bonId
           }),
         });
+      }
+
+      // Save versements 
+      console.log('Saving versements...');
+      const validVersements = formData.versements.filter(v => v.montant && parseFloat(v.montant) > 0);
+      
+      // Log the versements being saved
+      console.log('Valid versements to save:', validVersements);
+      
+      for (const versement of validVersements) {
+        try {
+          const versementResponse = await fetch(`http://localhost:8000/api/bon-achats/${bonId}/versements`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              montant: parseFloat(versement.montant),
+              type: versement.type,
+              bon_achat_id: bonId
+            }),
+          });
+          
+          if (!versementResponse.ok) {
+            const errorData = await versementResponse.json();
+            console.error('Error saving versement:', errorData);
+            throw new Error(`Erreur lors de l'enregistrement du versement: ${errorData.detail || versementResponse.statusText}`);
+          }
+          
+          console.log('Versement saved successfully');
+        } catch (error) {
+          console.error('Error in versement save:', error);
+          showSnackbar(`Erreur lors de l'enregistrement d'un versement: ${error.message}`, 'error');
+          // Continue with other versements even if one fails
+        }
       }
 
       showSnackbar(
@@ -366,6 +482,12 @@ const Bon_Achats = () => {
       align: 'right',
       headerClassName: 'super-app-theme--header',
       valueFormatter: (params) => `${parseFloat(params.value).toFixed(2)} DA`,
+      cellClassName: (params) => {
+        if (params.row.montant_verse === params.row.montant_total) {
+          return 'text-success';
+        }
+        return '';
+      }
     },
     {
       field: 'actions',
@@ -426,6 +548,9 @@ const Bon_Achats = () => {
           sx={{
             '& .MuiDataGrid-columnHeaderTitle': {
               fontWeight: 'bold'
+            },
+            '& .text-success': {
+              color: 'green'
             }
           }}
         />
@@ -637,6 +762,114 @@ const Bon_Achats = () => {
                   size="small"
                 >
                   Ajouter un produit
+                </Button>
+              )}
+            </Box>
+          </Box>
+
+          {/* Versements Section */}
+          <Box sx={{ mt: 4 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="subtitle1">Versements</Typography>
+              {selectedBon && (
+                <IconButton 
+                  onClick={() => toggleFieldEditability('versements')} 
+                  sx={{ ml: 1 }}
+                  color={editableFields.versements ? "primary" : "default"}
+                >
+                  {editableFields.versements ? <SaveIcon /> : <EditIcon sx={{ color: '#FF9800' }} />}
+                </IconButton>
+              )}
+            </Box>
+            
+            {/* Versements Table */}
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableRow>
+                    <TableCell align="center" sx={{ px: 1, width: '100px' }}>Montant</TableCell>
+                    <TableCell>Type</TableCell>
+                    {(!selectedBon || editableFields.versements) && (
+                      <TableCell align="center" sx={{ width: '50px', p: 0 }}>Actions</TableCell>
+                    )}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {formData.versements.map((versement, index) => (
+                    <TableRow key={index}>
+                      <TableCell align="center" sx={{ px: 1 }}>
+                        {(!selectedBon || editableFields.versements) ? (
+                          <TextField
+                            type="number"
+                            value={versement.montant}
+                            onChange={(e) => handleVersementChange(index, 'montant', e.target.value)}
+                            placeholder="Montant"
+                            variant="standard"
+                            required
+                            error={!versement.montant}
+                            inputProps={{ 
+                              min: "0",
+                              style: { textAlign: 'right' }
+                            }}
+                            sx={{ 
+                              width: '120px',
+                              '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                                '-webkit-appearance': 'none',
+                                margin: 0
+                              },
+                              '& input[type=number]': {
+                                '-moz-appearance': 'textfield'
+                              }
+                            }}
+                          />
+                        ) : (
+                          <Typography>{versement.montant} DA</Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {(!selectedBon || editableFields.versements) ? (
+                          <TextField
+                            select
+                            value={versement.type}
+                            onChange={(e) => handleVersementChange(index, 'type', e.target.value)}
+                            variant="standard"
+                            fullWidth
+                          >
+                            <MenuItem value="Espèce">Espèce</MenuItem>
+                            <MenuItem value="Chèque">Chèque</MenuItem>
+                          </TextField>
+                        ) : (
+                          <Typography>{versement.type}</Typography>
+                        )}
+                      </TableCell>
+                      {(!selectedBon || editableFields.versements) && (
+                        <TableCell align="center" sx={{ width: '50px', p: 0 }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeleteVersement(index)}
+                            sx={{ color: 'red' }}
+                          >
+                            <CloseIcon />
+                          </IconButton>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                TOTAL VERSÉ: {calculateTotalVersements()} DA
+              </Typography>
+              {(!selectedBon || editableFields.versements) && (
+                <Button
+                  startIcon={<AddIcon />}
+                  onClick={handleAddVersement}
+                  variant="outlined"
+                  size="small"
+                >
+                  Ajouter un versement
                 </Button>
               )}
             </Box>

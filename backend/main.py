@@ -246,6 +246,46 @@ class Inventaire(BaseModel):
             raise HTTPException(status_code=400, detail="Le prix doit être supérieur à 0")
         return v
 
+# Versement_Bon_Achat model
+class VersementBonAchat(BaseModel):
+    """Versement bon d'achat model"""
+    id: Optional[int] = None
+    montant: float
+    type: str
+    bon_achat_id: int
+
+    @validator('montant')
+    def validate_montant(cls, v):
+        if v <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Le montant versé doit être supérieur à 0"
+            )
+        return v
+
+    @validator('type')
+    def validate_type(cls, v):
+        valid_types = ['Chèque', 'Espèce']
+        if v not in valid_types:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Le type de versement doit être l'un des suivants: {', '.join(valid_types)}"
+            )
+        return v
+
+def recalculate_montant_verse(bon_id: int, cursor):
+    """Recalculate the total montant_verse for a bon d'achat based on versements"""
+    cursor.execute("SELECT SUM(montant) FROM Versement_Bon_Achat WHERE bon_achat_id = ?", (bon_id,))
+    total_versements = cursor.fetchone()[0]
+    total_versements = total_versements if total_versements is not None else 0
+    
+    # Update the montant_verse field
+    cursor.execute(
+        "UPDATE Bon_Achats SET montant_verse = ? WHERE id = ?",
+        (total_versements, bon_id)
+    )
+    return total_versements
+
 # API Endpoints
 @app.get("/api/dashboard/stats")
 async def get_dashboard_stats():
@@ -672,11 +712,12 @@ async def get_fournisseur(fournisseur_id: int, conn = Depends(get_db)):
             raise HTTPException(status_code=404, detail=f"Fournisseur avec ID {fournisseur_id} non trouvé")
         
         return {
-            "id": row[0],
-            "nom": row[1],
-            "telephone": row[2],
-            "adresse": row[3]
-        }
+                "id": row[0],
+                "nom": row[1],
+                "telephone": row[2],
+                "adresse": row[3]
+            }
+    
     except HTTPException:
         raise
     except Exception as e:
@@ -802,17 +843,28 @@ async def create_bon_achat(bon: BonAchats, id: Optional[int] = None, conn = Depe
     try:
         cursor = conn.cursor()
         
+        # Always start with montant_verse = 0 for new bons
+        montant_verse = 0
+        
         if id:
+            # When recreating with specific ID, check if there are any versements
+            cursor.execute("SELECT SUM(montant) FROM Versement_Bon_Achat WHERE bon_achat_id = ?", (id,))
+            total_versements = cursor.fetchone()[0]
+            
+            # Update montant_verse if versements exist
+            if total_versements is not None:
+                montant_verse = total_versements
+            
             # When recreating with specific ID (for update via delete and recreate)
             cursor.execute(
                 "INSERT INTO Bon_Achats (id, date, fournisseur, montant_total, montant_verse) VALUES (?, ?, ?, ?, ?) RETURNING *",
-                (id, bon.date, bon.fournisseur, bon.montant_total, bon.montant_verse)
+                (id, bon.date, bon.fournisseur, bon.montant_total, montant_verse)
             )
         else:
             # Normal creation with auto-incremented ID
             cursor.execute(
                 "INSERT INTO Bon_Achats (date, fournisseur, montant_total, montant_verse) VALUES (?, ?, ?, ?) RETURNING *",
-                (bon.date, bon.fournisseur, bon.montant_total, bon.montant_verse)
+                (bon.date, bon.fournisseur, bon.montant_total, montant_verse)
             )
             
         new_bon = cursor.fetchone()
@@ -831,11 +883,19 @@ async def update_bon_achat(bon_id: int, bon: BonAchats, conn = Depends(get_db)):
         cursor.execute("SELECT id FROM Bon_Achats WHERE id = ?", (bon_id,))
         if cursor.fetchone() is None:
             raise HTTPException(status_code=404, detail="Bon d'achat non trouvé")
+        
+        # Calculate the actual montant_verse based on versements
+        cursor.execute("SELECT SUM(montant) FROM Versement_Bon_Achat WHERE bon_achat_id = ?", (bon_id,))
+        total_versements = cursor.fetchone()[0]
+        total_versements = total_versements if total_versements is not None else 0
+        
+        # Ensure montant_verse matches the versements
+        montant_verse = total_versements
             
         # Update the bon d'achat
         cursor.execute(
             "UPDATE Bon_Achats SET date = ?, fournisseur = ?, montant_total = ?, montant_verse = ? WHERE id = ? RETURNING *",
-            (bon.date, bon.fournisseur, bon.montant_total, bon.montant_verse, bon_id)
+            (bon.date, bon.fournisseur, bon.montant_total, montant_verse, bon_id)
         )
         updated_bon = cursor.fetchone()
         conn.commit()
@@ -1058,3 +1118,148 @@ async def get_inventaire(conn = Depends(get_db)):
     except sqlite3.Error as e:
         print(f"Error fetching inventory: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.get("/api/bon-achats/{bon_id}/versements", response_model=List[VersementBonAchat])
+async def get_versements_bon_achat(bon_id: int, conn = Depends(get_db)):
+    """Get all payments for a specific bon d'achat"""
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM Versement_Bon_Achat WHERE bon_achat_id = ? ORDER BY id",
+            (bon_id,)
+        )
+        versements = cursor.fetchall()
+        return [dict(row) for row in versements]
+    except sqlite3.Error as e:
+        print(f"Error fetching versements: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/bon-achats/{bon_id}/versements", response_model=VersementBonAchat)
+async def create_versement_bon_achat(bon_id: int, versement: VersementBonAchat, conn = Depends(get_db)):
+    """Add a new payment to a bon d'achat"""
+    try:
+        # Verify that the bon_achat exists
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, montant_total, montant_verse FROM Bon_Achats WHERE id = ?", (bon_id,))
+        bon_achat = cursor.fetchone()
+        if bon_achat is None:
+            raise HTTPException(status_code=404, detail="Bon d'achat non trouvé")
+        
+        # Get current total paid amount
+        current_montant_verse = bon_achat[2] or 0
+        montant_total = bon_achat[1] or 0
+        
+        # Calculate new total paid amount
+        new_montant_verse = current_montant_verse + versement.montant
+        
+        # Check if new payment exceeds total amount
+        if new_montant_verse > montant_total:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Le montant versé ({new_montant_verse} DA) ne peut pas dépasser le montant total ({montant_total} DA)"
+            )
+        
+        # Insert the new payment
+        cursor.execute(
+            """
+            INSERT INTO Versement_Bon_Achat (montant, type, bon_achat_id)
+            VALUES (?, ?, ?) RETURNING *
+            """,
+            (versement.montant, versement.type, bon_id)
+        )
+        new_versement = cursor.fetchone()
+        
+        # Recalculate montant_verse
+        recalculate_montant_verse(bon_id, cursor)
+        
+        conn.commit()
+        return dict(new_versement)
+    except sqlite3.Error as e:
+        print(f"Error creating versement: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/bon-achats/{bon_id}/versements/{versement_id}", response_model=VersementBonAchat)
+async def update_versement_bon_achat(
+    bon_id: int,
+    versement_id: int,
+    versement: VersementBonAchat,
+    conn = Depends(get_db)
+):
+    """Update a payment in a bon d'achat"""
+    try:
+        cursor = conn.cursor()
+        
+        # First get the current versement
+        cursor.execute(
+            "SELECT montant FROM Versement_Bon_Achat WHERE id = ? AND bon_achat_id = ?",
+            (versement_id, bon_id)
+        )
+        current_versement = cursor.fetchone()
+        if current_versement is None:
+            raise HTTPException(status_code=404, detail="Versement non trouvé")
+        
+        current_montant = current_versement[0]
+        
+        # Get the bon d'achat details
+        cursor.execute("SELECT montant_total FROM Bon_Achats WHERE id = ?", (bon_id,))
+        bon_achat = cursor.fetchone()
+        montant_total = bon_achat[0]
+        
+        # Update the versement
+        cursor.execute(
+            """
+            UPDATE Versement_Bon_Achat 
+            SET montant = ?, type = ?
+            WHERE id = ? AND bon_achat_id = ?
+            RETURNING *
+            """,
+            (versement.montant, versement.type, versement_id, bon_id)
+        )
+        updated_versement = cursor.fetchone()
+        
+        # Recalculate the total versements for this bon d'achat
+        total_versements = recalculate_montant_verse(bon_id, cursor)
+        
+        # Check if new total exceeds montant_total
+        if total_versements > montant_total:
+            # Rollback the transaction
+            conn.rollback()
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Le montant versé ({total_versements} DA) ne peut pas dépasser le montant total ({montant_total} DA)"
+            )
+        
+        conn.commit()
+        return dict(updated_versement)
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/bon-achats/{bon_id}/versements/{versement_id}")
+async def delete_versement_bon_achat(bon_id: int, versement_id: int, conn = Depends(get_db)):
+    """Delete a payment from a bon d'achat"""
+    try:
+        cursor = conn.cursor()
+        
+        # First get the versement details
+        cursor.execute(
+            "SELECT id FROM Versement_Bon_Achat WHERE id = ? AND bon_achat_id = ?",
+            (versement_id, bon_id)
+        )
+        versement = cursor.fetchone()
+        
+        if versement is None:
+            raise HTTPException(status_code=404, detail="Versement non trouvé")
+            
+        # Delete the versement
+        cursor.execute(
+            "DELETE FROM Versement_Bon_Achat WHERE id = ? AND bon_achat_id = ?",
+            (versement_id, bon_id)
+        )
+        
+        # Recalculate the montant_verse
+        recalculate_montant_verse(bon_id, cursor)
+        
+        conn.commit()
+        return {"message": "Versement supprimé avec succès"}
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=str(e))

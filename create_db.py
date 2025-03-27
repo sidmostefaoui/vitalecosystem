@@ -201,7 +201,7 @@ cursor.execute('DROP TABLE IF EXISTS Versement_Bon_Achat')
 cursor.execute('''
 CREATE TABLE Versement_Bon_Achat (
     id INTEGER PRIMARY KEY,
-    montant_verse REAL NOT NULL CHECK (montant_verse > 0),
+    montant REAL NOT NULL CHECK (montant > 0),
     type TEXT NOT NULL CHECK (type IN ('Chèque', 'Espèce')),
     bon_achat_id INTEGER NOT NULL,
     FOREIGN KEY (bon_achat_id) REFERENCES Bon_Achats(id) ON DELETE CASCADE
@@ -218,7 +218,7 @@ versement_bon_achat_data = [
 ]
 
 cursor.executemany('''
-INSERT INTO Versement_Bon_Achat (id, montant_verse, type, bon_achat_id)
+INSERT INTO Versement_Bon_Achat (id, montant, type, bon_achat_id)
 VALUES (?, ?, ?, ?)
 ''', versement_bon_achat_data)
 
