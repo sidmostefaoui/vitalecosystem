@@ -257,3 +257,58 @@ class ClientModel(BaseModel):
         except ValueError:
             raise HTTPException(status_code=400, detail="Format de date invalide. Utilisez le format dd/mm/yyyy")
         return v
+
+# Contrat_Forfait model
+class ContratForfaitModel(BaseModel):
+    """Modèle pour contrat forfait"""
+    id: Optional[int] = None
+    date_debut: str
+    date_fin: str
+    montant: int
+    client_id: int
+    
+    @validator('date_debut', 'date_fin')
+    def validate_date_format(cls, v):
+        try:
+            datetime.strptime(v, '%d/%m/%Y')
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Format de date invalide. Utilisez le format dd/mm/yyyy"
+            )
+        return v
+    
+    @validator('date_fin')
+    def validate_date_fin_greater(cls, v, values):
+        if 'date_debut' in values:
+            try:
+                debut = datetime.strptime(values['date_debut'], '%d/%m/%Y')
+                fin = datetime.strptime(v, '%d/%m/%Y')
+                if fin <= debut:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="La date de fin doit être postérieure à la date de début"
+                    )
+            except ValueError:
+                # Already handled by validate_date_format
+                pass
+        return v
+    
+    @validator('montant')
+    def validate_montant(cls, v):
+        if v <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Le montant doit être supérieur à 0"
+            )
+        return v
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "date_debut": "01/01/2024",
+                "date_fin": "31/12/2024",
+                "montant": 120000,
+                "client_id": 1
+            }
+        }

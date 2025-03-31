@@ -22,18 +22,21 @@ import {
 import { DataGrid, frFR, GridActionsCellItem } from '@mui/x-data-grid';
 import { 
   Add as AddIcon,
-  Delete as DeleteIcon 
+  Delete as DeleteIcon,
+  Person as PersonIcon
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format } from 'date-fns';
 import fr from 'date-fns/locale/fr';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * Clients component - Manages clients data with creation and deletion operations
  */
 const Clients = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState([]);
   const [agents, setAgents] = useState([]);
@@ -133,10 +136,16 @@ const Clients = () => {
     {
       field: 'actions',
       type: 'actions',
-      headerName: 'Actions',
-      width: 80,
+      headerName: '',
+      width: 120,
       headerClassName: 'super-app-theme--header',
       getActions: (params) => [
+        <GridActionsCellItem
+          icon={<PersonIcon />}
+          label="Profil"
+          onClick={() => handleProfileClick(params.row)}
+          sx={{ color: '#2196F3' }}
+        />,
         <GridActionsCellItem
           icon={<DeleteIcon />}
           label="Supprimer"
@@ -298,6 +307,11 @@ const Clients = () => {
 
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
+  };
+
+  // Handle opening the profile page
+  const handleProfileClick = (client) => {
+    navigate(`/clients/${client.id}`);
   };
 
   if (loading) {

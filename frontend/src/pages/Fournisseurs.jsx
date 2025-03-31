@@ -67,7 +67,7 @@ const Fournisseurs = () => {
     {
       field: 'actions',
       type: 'actions',
-      headerName: 'Actions',
+      headerName: '',
       width: 100,
       pinned: 'right',
       getActions: (params) => [

@@ -239,6 +239,20 @@ INSERT INTO Client (id, nom, specialite, tel, mode, agent, etat_contrat, debut_c
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 ''', client_data)
 
+# Create Contrat_Forfait table
+cursor.execute('DROP TABLE IF EXISTS Contrat_Forfait')
+cursor.execute('''
+CREATE TABLE Contrat_Forfait (
+    id INTEGER PRIMARY KEY,
+    date_debut TEXT NOT NULL,
+    date_fin TEXT NOT NULL,
+    montant INTEGER NOT NULL CHECK (montant > 0),
+    client_id INTEGER NOT NULL,
+    FOREIGN KEY (client_id) REFERENCES Client(id) ON DELETE CASCADE,
+    CHECK (date_fin > date_debut)
+)
+''')
+
 # Commit the changes and close the connection
 conn.commit()
 conn.close()

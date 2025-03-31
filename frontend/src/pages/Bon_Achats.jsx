@@ -46,7 +46,7 @@ const Bon_Achats = () => {
   const [formData, setFormData] = useState({
     date: new Date(),
     fournisseur: '',
-    produits: [{ produit: '', qte: '', prix: '', isEditing: true }],
+    produits: [],
     versements: []
   });
   const [loading, setLoading] = useState(true);
@@ -126,7 +126,7 @@ const Bon_Achats = () => {
       setFormData({
         date: new Date(),
         fournisseur: '',
-        produits: [{ produit: '', qte: '', prix: '', isEditing: true }],
+        produits: [],
         versements: []
       });
       setEditableFields({
@@ -196,7 +196,7 @@ const Bon_Achats = () => {
     setFormData({
       date: new Date(),
       fournisseur: '',
-      produits: [{ produit: '', qte: '', prix: '', isEditing: true }],
+      produits: [],
       versements: []
     });
   };
@@ -655,7 +655,7 @@ const Bon_Achats = () => {
                     <TableCell align="center" sx={{ px: 1, width: '50px' }}>Qte</TableCell>
                     <TableCell align="center" sx={{ px: 1, width: '100px' }}>Prix</TableCell>
                     {(!selectedBon || editableFields.produits) && (
-                      <TableCell align="center" sx={{ width: '50px', p: 0 }}>Actions</TableCell>
+                      <TableCell align="center" sx={{ width: '50px', p: 0 }}></TableCell>
                     )}
                   </TableRow>
                 </TableHead>
@@ -790,7 +790,7 @@ const Bon_Achats = () => {
                     <TableCell align="center" sx={{ px: 1, width: '100px' }}>Montant</TableCell>
                     <TableCell>Type</TableCell>
                     {(!selectedBon || editableFields.versements) && (
-                      <TableCell align="center" sx={{ width: '50px', p: 0 }}>Actions</TableCell>
+                      <TableCell align="center" sx={{ width: '50px', p: 0 }}></TableCell>
                     )}
                   </TableRow>
                 </TableHead>

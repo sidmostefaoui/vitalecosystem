@@ -15,6 +15,7 @@ import {
 } from '@mui/icons-material';
 import Dashboard from './pages/Dashboard';
 import Clients from './pages/Clients';
+import ClientProfile from './pages/ClientProfile';
 import Agents from './pages/Agents';
 import SubMenu from './pages/SubMenu';
 import Produits_Services from './pages/Produits_Services';
@@ -45,6 +46,8 @@ function AppContent() {
   const handleReturn = () => {
     if (location.pathname === '/clients') {
       navigate('/regime-forfait');
+    } else if (location.pathname.startsWith('/clients/')) {
+      navigate('/clients');
     } else if (location.pathname === '/fournisseurs' || location.pathname === '/bon-achats') {
       navigate('/achats');
     } else {
@@ -86,6 +89,7 @@ function AppContent() {
         <Routes>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/clients" element={<Clients />} />
+          <Route path="/clients/:id" element={<ClientProfile />} />
           <Route path="/agents-list" element={<Agents />} />
           <Route path="/regime-forfait" element={<SubMenu title="Régime Forfait" />} />
           <Route path="/regime-réel" element={<SubMenu title="Régime Réel" />} />
