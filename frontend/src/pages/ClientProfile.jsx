@@ -26,6 +26,7 @@ import {
   Edit as EditIcon,
   Save as SaveIcon,
   ArrowBack as ArrowBackIcon,
+  Add as AddIcon
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -269,48 +270,6 @@ const ClientProfile = () => {
                 />
               </Grid>
               <Grid item xs={12} md={6}>
-                <TextField
-                  label="Téléphone"
-                  fullWidth
-                  margin="normal"
-                  value={formData.tel || ''}
-                  onChange={(e) => handleChange('tel', e.target.value)}
-                  disabled={!editableFields.tel}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton onClick={() => toggleFieldEdit('tel')} edge="end">
-                          {editableFields.tel ? <SaveIcon color="primary" /> : <EditIcon sx={{ color: '#FF9800' }} />}
-                        </IconButton>
-                      </InputAdornment>
-                    )
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel id="mode-label">Mode (jours)</InputLabel>
-                  <Select
-                    labelId="mode-label"
-                    label="Mode (jours)"
-                    value={formData.mode || 30}
-                    onChange={(e) => handleChange('mode', e.target.value)}
-                    disabled={!editableFields.mode}
-                    endAdornment={
-                      <InputAdornment position="end">
-                        <IconButton onClick={() => toggleFieldEdit('mode')} edge="end" sx={{ mr: 2 }}>
-                          {editableFields.mode ? <SaveIcon color="primary" /> : <EditIcon sx={{ color: '#FF9800' }} />}
-                        </IconButton>
-                      </InputAdornment>
-                    }
-                  >
-                    <MenuItem value={30}>30 jours</MenuItem>
-                    <MenuItem value={60}>60 jours</MenuItem>
-                    <MenuItem value={90}>90 jours</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={6}>
                 <FormControl fullWidth margin="normal">
                   <InputLabel id="agent-label">Agent</InputLabel>
                   <Select
@@ -337,20 +296,44 @@ const ClientProfile = () => {
               </Grid>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth margin="normal">
+                  <InputLabel id="mode-label">Mode (jours)</InputLabel>
+                  <Select
+                    labelId="mode-label"
+                    label="Mode (jours)"
+                    value={formData.mode || 30}
+                    onChange={(e) => handleChange('mode', e.target.value)}
+                    disabled={!editableFields.mode}
+                    endAdornment={
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => toggleFieldEdit('mode')} edge="end" sx={{ mr: 2 }}>
+                          {editableFields.mode ? <SaveIcon color="primary" /> : <EditIcon sx={{ color: '#FF9800' }} />}
+                        </IconButton>
+                      </InputAdornment>
+                    }
+                  >
+                    <MenuItem value={30}>30 jours</MenuItem>
+                    <MenuItem value={60}>60 jours</MenuItem>
+                    <MenuItem value={90}>90 jours</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Téléphone"
+                  fullWidth
+                  margin="normal"
+                  value={formData.tel || ''}
+                  disabled={true}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth margin="normal">
                   <InputLabel id="etat-label">État Contrat</InputLabel>
                   <Select
                     labelId="etat-label"
                     label="État Contrat"
                     value={formData.etat_contrat || 'Actif'}
-                    onChange={(e) => handleChange('etat_contrat', e.target.value)}
-                    disabled={!editableFields.etat_contrat}
-                    endAdornment={
-                      <InputAdornment position="end">
-                        <IconButton onClick={() => toggleFieldEdit('etat_contrat')} edge="end" sx={{ mr: 2 }}>
-                          {editableFields.etat_contrat ? <SaveIcon color="primary" /> : <EditIcon sx={{ color: '#FF9800' }} />}
-                        </IconButton>
-                      </InputAdornment>
-                    }
+                    disabled={true}
                   >
                     <MenuItem value="Actif">Actif</MenuItem>
                     <MenuItem value="En Pause">En Pause</MenuItem>
@@ -364,21 +347,12 @@ const ClientProfile = () => {
                     label="Début Contrat"
                     value={formData.debut_contrat}
                     onChange={(date) => handleChange('debut_contrat', date)}
-                    disabled={!editableFields.debut_contrat}
+                    disabled={true}
                     format="dd/MM/yyyy"
                     slotProps={{ 
                       textField: { 
                         fullWidth: true, 
-                        margin: 'normal',
-                        InputProps: {
-                          endAdornment: (
-                            <InputAdornment position="end">
-                              <IconButton onClick={() => toggleFieldEdit('debut_contrat')} edge="end">
-                                {editableFields.debut_contrat ? <SaveIcon color="primary" /> : <EditIcon sx={{ color: '#FF9800' }} />}
-                              </IconButton>
-                            </InputAdornment>
-                          )
-                        }
+                        margin: 'normal'
                       } 
                     }}
                   />
@@ -390,21 +364,12 @@ const ClientProfile = () => {
                     label="Fin Contrat"
                     value={formData.fin_contrat}
                     onChange={(date) => handleChange('fin_contrat', date)}
-                    disabled={!editableFields.fin_contrat}
+                    disabled={true}
                     format="dd/MM/yyyy"
                     slotProps={{ 
                       textField: { 
                         fullWidth: true, 
-                        margin: 'normal',
-                        InputProps: {
-                          endAdornment: (
-                            <InputAdornment position="end">
-                              <IconButton onClick={() => toggleFieldEdit('fin_contrat')} edge="end">
-                                {editableFields.fin_contrat ? <SaveIcon color="primary" /> : <EditIcon sx={{ color: '#FF9800' }} />}
-                              </IconButton>
-                            </InputAdornment>
-                          )
-                        }
+                        margin: 'normal'
                       } 
                     }}
                   />
@@ -429,16 +394,52 @@ const ClientProfile = () => {
             <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
               Transactions du client
             </Typography>
-            <Paper elevation={0} sx={{ border: 1, borderColor: 'divider' }}>
-              <Tabs 
-                value={tabValue} 
-                onChange={handleTabChange} 
-                aria-label="client information tabs"
-                sx={{ borderBottom: 1, borderColor: 'divider' }}
-              >
-                <Tab label="Bons de livraison" id="tab-0" />
-                <Tab label="Versements" id="tab-1" />
-              </Tabs>
+            <Paper elevation={0} sx={{ borderBottom: 1, borderLeft: 1, borderRight: 1, borderColor: 'divider' }}>
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderBottom: 1, 
+                borderColor: 'divider'
+              }}>
+                <Tabs 
+                  value={tabValue} 
+                  onChange={handleTabChange} 
+                  aria-label="client information tabs"
+                  sx={{ flexGrow: 1 }}
+                >
+                  <Tab label="Bons de livraison" id="tab-0" />
+                  <Tab label="Versements" id="tab-1" />
+                  <Tab label="Contrats" id="tab-2" />
+                </Tabs>
+                {tabValue === 0 && (
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    sx={{ mx: 2 }}
+                  >
+                    Nouveau Bon de livraison
+                  </Button>
+                )}
+                {tabValue === 1 && (
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    sx={{ mx: 2 }}
+                  >
+                    Nouveau Versement
+                  </Button>
+                )}
+                {tabValue === 2 && (
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    sx={{ mx: 2 }}
+                  >
+                    Nouveau Contrat
+                  </Button>
+                )}
+              </Box>
               
               {/* Bons de livraison Tab */}
               <Box
@@ -463,6 +464,19 @@ const ClientProfile = () => {
               >
                 <Typography variant="body1" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                   Contenu des versements à venir...
+                </Typography>
+              </Box>
+              
+              {/* Contrats Tab */}
+              <Box
+                role="tabpanel"
+                hidden={tabValue !== 2}
+                id="tabpanel-2"
+                aria-labelledby="tab-2"
+                sx={{ p: 3, minHeight: '40vh' }}
+              >
+                <Typography variant="body1" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                  Contenu des contrats à venir...
                 </Typography>
               </Box>
             </Paper>
