@@ -7,3 +7,4 @@ alwaysApply: true
 Guidelines for how I want the agent to interact with me, what to do and what not to do:
 
 - DON'T RELOAD THE UVICORN WEB SERVER EVER, just tell me to and i'll do it manually.
+- When I tell you to create a new database table or modify an existing one, change the create_db.py script, then run this script in the terminal, don't run other commands or create other files.

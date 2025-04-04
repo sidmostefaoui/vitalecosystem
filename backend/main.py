@@ -995,7 +995,7 @@ async def get_clients(conn = Depends(get_db)):
     """Get all clients."""
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM Client ORDER BY nom")
+        cursor.execute("SELECT * FROM Client_Forfait ORDER BY nom")
         clients = cursor.fetchall()
         
         # Convert to list of dicts for Pydantic model
@@ -1011,11 +1011,11 @@ async def get_client(client_id: int, conn = Depends(get_db)):
     """Get a specific client by ID."""
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM Client WHERE id = ?", (client_id,))
+        cursor.execute("SELECT * FROM Client_Forfait WHERE id = ?", (client_id,))
         client = cursor.fetchone()
         
         if client is None:
-            raise HTTPException(status_code=404, detail=f"Client avec ID {client_id} non trouvé")
+            raise HTTPException(status_code=404, detail=f"Client_Forfait avec ID {client_id} non trouvé")
         
         return dict(client)
     except HTTPException:
@@ -1031,18 +1031,18 @@ async def create_client(client: ClientModel, conn = Depends(get_db)):
         cursor = conn.cursor()
         
         # Check for unique name
-        cursor.execute("SELECT id FROM Client WHERE nom = ?", (client.nom,))
+        cursor.execute("SELECT id FROM Client_Forfait WHERE nom = ?", (client.nom,))
         if cursor.fetchone() is not None:
             raise HTTPException(status_code=400, detail=f"Un client avec le nom '{client.nom}' existe déjà")
         
         # Get next ID
-        cursor.execute("SELECT MAX(id) FROM Client")
+        cursor.execute("SELECT MAX(id) FROM Client_Forfait")
         max_id = cursor.fetchone()[0]
         next_id = 1 if max_id is None else max_id + 1
         
         # Insert the new client
         cursor.execute("""
-            INSERT INTO Client (id, nom, specialite, tel, mode, agent, etat_contrat, debut_contrat, fin_contrat)
+            INSERT INTO Client_Forfait (id, nom, specialite, tel, mode, agent, etat_contrat, debut_contrat, fin_contrat)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             next_id,
@@ -1073,15 +1073,15 @@ async def delete_client(client_id: int, conn = Depends(get_db)):
         cursor = conn.cursor()
         
         # Check if client exists
-        cursor.execute("SELECT id FROM Client WHERE id = ?", (client_id,))
+        cursor.execute("SELECT id FROM Client_Forfait WHERE id = ?", (client_id,))
         if cursor.fetchone() is None:
-            raise HTTPException(status_code=404, detail=f"Client avec ID {client_id} non trouvé")
+            raise HTTPException(status_code=404, detail=f"Client_Forfait avec ID {client_id} non trouvé")
         
         # Delete the client
-        cursor.execute("DELETE FROM Client WHERE id = ?", (client_id,))
+        cursor.execute("DELETE FROM Client_Forfait WHERE id = ?", (client_id,))
         conn.commit()
         
-        return {"message": f"Client avec ID {client_id} supprimé avec succès"}
+        return {"message": f"Client_Forfait avec ID {client_id} supprimé avec succès"}
     except HTTPException:
         raise
     except Exception as e:
@@ -1120,12 +1120,13 @@ async def get_contrats_forfait():
 @app.get("/api/contrats-forfait/{contrat_id}", response_model=ContratForfaitModel)
 async def get_contrat_forfait(contrat_id: int):
     """
-    Récupère un contrat forfait par son ID
+    Récupère un contrat forfait spécifique par son ID
     """
     try:
         conn = get_db()
         cursor = conn.cursor()
         
+        # Récupérer le contrat
         cursor.execute("SELECT * FROM Contrat_Forfait WHERE id = ?", (contrat_id,))
         contrat = cursor.fetchone()
         
@@ -1134,12 +1135,15 @@ async def get_contrat_forfait(contrat_id: int):
         if contrat is None:
             raise HTTPException(status_code=404, detail="Contrat forfait non trouvé")
         
+        # Retourner le contrat
         return {
             "id": contrat[0],
             "date_debut": contrat[1],
             "date_fin": contrat[2],
             "montant": contrat[3],
-            "client_id": contrat[4]
+            "prix_exces_poids": contrat[4],
+            "etat": contrat[5],
+            "client_id": contrat[6]
         }
     except Exception as e:
         if isinstance(e, HTTPException):
@@ -1147,21 +1151,20 @@ async def get_contrat_forfait(contrat_id: int):
         raise HTTPException(status_code=500, detail=f"Erreur lors de la récupération du contrat forfait: {str(e)}")
 
 @app.get("/api/clients/{client_id}/contrats-forfait", response_model=List[ContratForfaitModel])
-async def get_contrats_forfait_by_client(client_id: int):
+async def get_contrats_forfait_by_client(client_id: int, conn = Depends(get_db)):
     """
     Récupère tous les contrats forfait d'un client spécifique
     """
     try:
-        conn = get_db()
         cursor = conn.cursor()
         
         # Vérifier si le client existe
-        cursor.execute("SELECT * FROM Client WHERE id = ?", (client_id,))
+        cursor.execute("SELECT * FROM Client_Forfait WHERE id = ?", (client_id,))
         client = cursor.fetchone()
         
         if client is None:
             conn.close()
-            raise HTTPException(status_code=404, detail="Client non trouvé")
+            raise HTTPException(status_code=404, detail="Client_Forfait non trouvé")
         
         cursor.execute("SELECT * FROM Contrat_Forfait WHERE client_id = ?", (client_id,))
         contrats = cursor.fetchall()
@@ -1169,13 +1172,7 @@ async def get_contrats_forfait_by_client(client_id: int):
         # Convertir les résultats en liste de dictionnaires
         result = []
         for contrat in contrats:
-            result.append({
-                "id": contrat[0],
-                "date_debut": contrat[1],
-                "date_fin": contrat[2],
-                "montant": contrat[3],
-                "client_id": contrat[4]
-            })
+            result.append(dict(contrat))
         
         conn.close()
         return result
@@ -1185,33 +1182,45 @@ async def get_contrats_forfait_by_client(client_id: int):
         raise HTTPException(status_code=500, detail=f"Erreur lors de la récupération des contrats forfait: {str(e)}")
 
 @app.post("/api/contrats-forfait", response_model=ContratForfaitModel)
-async def create_contrat_forfait(contrat: ContratForfaitModel):
+async def create_contrat_forfait(contrat: ContratForfaitModel, conn = Depends(get_db)):
     """
     Crée un nouveau contrat forfait
     """
     try:
-        conn = get_db()
         cursor = conn.cursor()
         
         # Vérifier si le client existe
-        cursor.execute("SELECT * FROM Client WHERE id = ?", (contrat.client_id,))
+        cursor.execute("SELECT * FROM Client_Forfait WHERE id = ?", (contrat.client_id,))
         client = cursor.fetchone()
         
         if client is None:
             conn.close()
-            raise HTTPException(status_code=404, detail="Client non trouvé")
+            raise HTTPException(status_code=404, detail="Client_Forfait non trouvé")
         
-        # Insérer le nouveau contrat forfait
+        # Vérifier si un contrat actif ou en pause existe déjà pour ce client
+        cursor.execute("SELECT * FROM Contrat_Forfait WHERE client_id = ? AND (etat = 'Actif' OR etat = 'Pause')", (contrat.client_id,))
+        contrat_existant = cursor.fetchone()
+        
+        if contrat_existant is not None:
+            raise HTTPException(status_code=400, detail="Un contrat actif ou en pause existe déjà pour ce client. Veuillez le mettre à l'état 'Terminé' avant d'en créer un nouveau.")
+        
+        # Insérer le nouveau contrat forfait (toujours actif par défaut)
         cursor.execute("""
-            INSERT INTO Contrat_Forfait (date_debut, date_fin, montant, client_id)
-            VALUES (?, ?, ?, ?)
-        """, (contrat.date_debut, contrat.date_fin, contrat.montant, contrat.client_id))
+            INSERT INTO Contrat_Forfait (date_debut, date_fin, montant, prix_exces_poids, client_id, etat)
+            VALUES (?, ?, ?, ?, ?, 'Actif')
+        """, (contrat.date_debut, contrat.date_fin, contrat.montant, contrat.prix_exces_poids, contrat.client_id))
         
         # Récupérer l'ID du contrat nouvellement créé
         contrat_id = cursor.lastrowid
         
+        # Mettre à jour les informations du client avec les détails du contrat
+        cursor.execute("""
+            UPDATE Client_Forfait
+            SET etat_contrat = 'Actif', debut_contrat = ?, fin_contrat = ?
+            WHERE id = ?
+        """, (contrat.date_debut, contrat.date_fin, contrat.client_id))
+        
         conn.commit()
-        conn.close()
         
         # Retourner le contrat complet avec l'ID
         return {
@@ -1219,7 +1228,9 @@ async def create_contrat_forfait(contrat: ContratForfaitModel):
             "date_debut": contrat.date_debut,
             "date_fin": contrat.date_fin,
             "montant": contrat.montant,
-            "client_id": contrat.client_id
+            "prix_exces_poids": contrat.prix_exces_poids,
+            "client_id": contrat.client_id,
+            "etat": "Actif"
         }
     except Exception as e:
         if isinstance(e, HTTPException):
@@ -1227,12 +1238,11 @@ async def create_contrat_forfait(contrat: ContratForfaitModel):
         raise HTTPException(status_code=500, detail=f"Erreur lors de la création du contrat forfait: {str(e)}")
 
 @app.put("/api/contrats-forfait/{contrat_id}", response_model=ContratForfaitModel)
-async def update_contrat_forfait(contrat_id: int, contrat: ContratForfaitModel):
+async def update_contrat_forfait(contrat_id: int, contrat: ContratForfaitModel, conn = Depends(get_db)):
     """
     Met à jour un contrat forfait existant
     """
     try:
-        conn = get_db()
         cursor = conn.cursor()
         
         # Vérifier si le contrat existe
@@ -1244,22 +1254,65 @@ async def update_contrat_forfait(contrat_id: int, contrat: ContratForfaitModel):
             raise HTTPException(status_code=404, detail="Contrat forfait non trouvé")
         
         # Vérifier si le client existe
-        cursor.execute("SELECT * FROM Client WHERE id = ?", (contrat.client_id,))
+        cursor.execute("SELECT * FROM Client_Forfait WHERE id = ?", (contrat.client_id,))
         client = cursor.fetchone()
         
         if client is None:
             conn.close()
-            raise HTTPException(status_code=404, detail="Client non trouvé")
+            raise HTTPException(status_code=404, detail="Client_Forfait non trouvé")
+        
+        # Si on essaie de passer le contrat à "Actif", vérifier qu'il n'existe pas déjà un contrat actif
+        if contrat.etat == "Actif" and existing_contrat["etat"] != "Actif":
+            cursor.execute("SELECT * FROM Contrat_Forfait WHERE client_id = ? AND etat = 'Actif' AND id != ?", 
+                           (contrat.client_id, contrat_id))
+            contrat_actif = cursor.fetchone()
+            
+            if contrat_actif is not None:
+                raise HTTPException(status_code=400, 
+                                  detail="Un contrat actif existe déjà pour ce client. Veuillez le mettre en pause avant d'activer celui-ci.")
         
         # Mettre à jour le contrat
         cursor.execute("""
             UPDATE Contrat_Forfait
-            SET date_debut = ?, date_fin = ?, montant = ?, client_id = ?
+            SET date_debut = ?, date_fin = ?, montant = ?, prix_exces_poids = ?, client_id = ?, etat = ?
             WHERE id = ?
-        """, (contrat.date_debut, contrat.date_fin, contrat.montant, contrat.client_id, contrat_id))
+        """, (contrat.date_debut, contrat.date_fin, contrat.montant, contrat.prix_exces_poids, 
+              contrat.client_id, contrat.etat, contrat_id))
+        
+        # Mettre à jour les informations du client en fonction de l'état du contrat
+        if contrat.etat == "Actif":
+            # Si le contrat est actif, mettre à jour les infos du client
+            cursor.execute("""
+                UPDATE Client_Forfait
+                SET etat_contrat = 'Actif', debut_contrat = ?, fin_contrat = ?
+                WHERE id = ?
+            """, (contrat.date_debut, contrat.date_fin, contrat.client_id))
+        elif contrat.etat == "Pause":
+            # Si le contrat est en pause, mettre à jour l'état du client
+            cursor.execute("""
+                UPDATE Client_Forfait
+                SET etat_contrat = 'En Pause'
+                WHERE id = ?
+            """, (contrat.client_id,))
+        elif contrat.etat == "Terminé":
+            # Vérifier s'il y a un autre contrat actif ou en pause
+            cursor.execute("""
+                SELECT COUNT(*) as count
+                FROM Contrat_Forfait
+                WHERE client_id = ? AND (etat = 'Actif' OR etat = 'Pause') AND id != ?
+            """, (contrat.client_id, contrat_id))
+            
+            has_other_active = cursor.fetchone()['count'] > 0
+            
+            # S'il n'y a pas d'autre contrat actif, réinitialiser les infos du client
+            if not has_other_active:
+                cursor.execute("""
+                    UPDATE Client_Forfait
+                    SET etat_contrat = NULL, debut_contrat = NULL, fin_contrat = NULL
+                    WHERE id = ?
+                """, (contrat.client_id,))
         
         conn.commit()
-        conn.close()
         
         # Retourner le contrat mis à jour
         return {
@@ -1267,7 +1320,9 @@ async def update_contrat_forfait(contrat_id: int, contrat: ContratForfaitModel):
             "date_debut": contrat.date_debut,
             "date_fin": contrat.date_fin,
             "montant": contrat.montant,
-            "client_id": contrat.client_id
+            "prix_exces_poids": contrat.prix_exces_poids,
+            "client_id": contrat.client_id,
+            "etat": contrat.etat
         }
     except Exception as e:
         if isinstance(e, HTTPException):
@@ -1275,12 +1330,11 @@ async def update_contrat_forfait(contrat_id: int, contrat: ContratForfaitModel):
         raise HTTPException(status_code=500, detail=f"Erreur lors de la mise à jour du contrat forfait: {str(e)}")
 
 @app.delete("/api/contrats-forfait/{contrat_id}")
-async def delete_contrat_forfait(contrat_id: int):
+async def delete_contrat_forfait(contrat_id: int, conn = Depends(get_db)):
     """
     Supprime un contrat forfait
     """
     try:
-        conn = get_db()
         cursor = conn.cursor()
         
         # Vérifier si le contrat existe
@@ -1291,14 +1345,409 @@ async def delete_contrat_forfait(contrat_id: int):
             conn.close()
             raise HTTPException(status_code=404, detail="Contrat forfait non trouvé")
         
+        client_id = contrat['client_id']
+        was_active = contrat['etat'] in ('Actif', 'Pause')
+        
         # Supprimer le contrat
         cursor.execute("DELETE FROM Contrat_Forfait WHERE id = ?", (contrat_id,))
         
+        # Si le contrat était actif ou en pause, vérifier s'il y a d'autres contrats actifs
+        if was_active:
+            # Vérifier s'il y a un autre contrat actif ou en pause
+            cursor.execute("""
+                SELECT COUNT(*) as count
+                FROM Contrat_Forfait
+                WHERE client_id = ? AND (etat = 'Actif' OR etat = 'Pause')
+            """, (client_id,))
+            
+            has_other_active = cursor.fetchone()['count'] > 0
+            
+            # S'il n'y a pas d'autre contrat actif, réinitialiser les infos du client
+            if not has_other_active:
+                cursor.execute("""
+                    UPDATE Client_Forfait
+                    SET etat_contrat = NULL, debut_contrat = NULL, fin_contrat = NULL
+                    WHERE id = ?
+                """, (client_id,))
+        
         conn.commit()
-        conn.close()
         
         return {"message": "Contrat forfait supprimé avec succès"}
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail=f"Erreur lors de la suppression du contrat forfait: {str(e)}")
+
+# Bon Passage Forfait endpoints
+@app.get("/api/bon-passage-forfait", response_model=List[BonPassageForfaitModel])
+async def get_bons_passage_forfait(conn = Depends(get_db)):
+    """Récupérer tous les bons de passage forfait"""
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Bon_Passage_Forfait ORDER BY date DESC")
+        bons = cursor.fetchall()
+        return [dict(bon) for bon in bons]
+    except Exception as e:
+        print(f"Error fetching bons de passage: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.get("/api/bon-passage-forfait/{bon_id}", response_model=BonPassageForfaitModel)
+async def get_bon_passage_forfait(bon_id: int, conn = Depends(get_db)):
+    """Récupérer un bon de passage forfait spécifique"""
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Bon_Passage_Forfait WHERE id = ?", (bon_id,))
+        bon = cursor.fetchone()
+        
+        if bon is None:
+            raise HTTPException(status_code=404, detail="Bon de passage forfait non trouvé")
+            
+        return dict(bon)
+    except Exception as e:
+        print(f"Error fetching bon de passage: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.get("/api/clients/{client_id}/bon-passage-forfait", response_model=List[BonPassageForfaitModel])
+async def get_bons_passage_forfait_by_client(client_id: int, conn = Depends(get_db)):
+    """Récupérer tous les bons de passage forfait d'un client spécifique"""
+    try:
+        cursor = conn.cursor()
+        
+        # Vérifier si le client existe
+        cursor.execute("SELECT * FROM Client_Forfait WHERE id = ?", (client_id,))
+        client = cursor.fetchone()
+        
+        if client is None:
+            raise HTTPException(status_code=404, detail="Client_Forfait non trouvé")
+        
+        cursor.execute("SELECT * FROM Bon_Passage_Forfait WHERE client_id = ? ORDER BY date DESC", (client_id,))
+        bons = cursor.fetchall()
+        
+        return [dict(bon) for bon in bons]
+    except Exception as e:
+        print(f"Error fetching bons de passage for client: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.post("/api/bon-passage-forfait", response_model=BonPassageForfaitModel)
+async def create_bon_passage_forfait(bon: BonPassageForfaitModel, conn = Depends(get_db)):
+    """Créer un nouveau bon de passage forfait"""
+    try:
+        cursor = conn.cursor()
+        
+        # Vérifier si le client existe
+        cursor.execute("SELECT * FROM Client_Forfait WHERE id = ?", (bon.client_id,))
+        client = cursor.fetchone()
+        
+        if client is None:
+            raise HTTPException(status_code=404, detail=f"Client_Forfait avec ID {bon.client_id} non trouvé")
+        
+        # Insérer le nouveau bon de passage avec montant et exces_poids
+        cursor.execute("""
+            INSERT INTO Bon_Passage_Forfait (date, client_id, montant, exces_poids)
+            VALUES (?, ?, ?, ?) RETURNING *
+        """, (bon.date, bon.client_id, bon.montant, bon.exces_poids))
+        
+        new_bon = cursor.fetchone()
+        conn.commit()
+        
+        return dict(new_bon)
+    except Exception as e:
+        print(f"Error creating bon de passage: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.put("/api/bon-passage-forfait/{bon_id}", response_model=BonPassageForfaitModel)
+async def update_bon_passage_forfait(bon_id: int, bon: BonPassageForfaitModel, conn = Depends(get_db)):
+    """Mettre à jour un bon de passage forfait"""
+    try:
+        cursor = conn.cursor()
+        
+        # Vérifier si le bon de passage existe
+        cursor.execute("SELECT * FROM Bon_Passage_Forfait WHERE id = ?", (bon_id,))
+        existing_bon = cursor.fetchone()
+        
+        if existing_bon is None:
+            raise HTTPException(status_code=404, detail="Bon de passage forfait non trouvé")
+        
+        # Vérifier si le client existe
+        cursor.execute("SELECT * FROM Client_Forfait WHERE id = ?", (bon.client_id,))
+        client = cursor.fetchone()
+        
+        if client is None:
+            raise HTTPException(status_code=404, detail="Client_Forfait non trouvé")
+        
+        # Mettre à jour le bon de passage avec montant et exces_poids
+        cursor.execute("""
+            UPDATE Bon_Passage_Forfait
+            SET date = ?, client_id = ?, montant = ?, exces_poids = ?
+            WHERE id = ? RETURNING *
+        """, (bon.date, bon.client_id, bon.montant, bon.exces_poids, bon_id))
+        
+        updated_bon = cursor.fetchone()
+        conn.commit()
+        
+        return dict(updated_bon)
+    except Exception as e:
+        print(f"Error updating bon de passage: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.delete("/api/bon-passage-forfait/{bon_id}")
+async def delete_bon_passage_forfait(bon_id: int, conn = Depends(get_db)):
+    """Supprimer un bon de passage forfait"""
+    try:
+        cursor = conn.cursor()
+        
+        # Vérifier si le bon de passage existe
+        cursor.execute("SELECT * FROM Bon_Passage_Forfait WHERE id = ?", (bon_id,))
+        bon = cursor.fetchone()
+        
+        if bon is None:
+            raise HTTPException(status_code=404, detail="Bon de passage forfait non trouvé")
+        
+        # Supprimer le bon de passage (les produits et services seront supprimés en cascade)
+        cursor.execute("DELETE FROM Bon_Passage_Forfait WHERE id = ?", (bon_id,))
+        conn.commit()
+        
+        return {"message": "Bon de passage forfait supprimé avec succès"}
+    except Exception as e:
+        print(f"Error deleting bon de passage: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+# Endpoints pour les produits dans un bon de passage
+@app.get("/api/bon-passage-forfait/{bon_id}/produits", response_model=List[BonPassageForfaitProduitModel])
+async def get_produits_bon_passage(bon_id: int, conn = Depends(get_db)):
+    """Récupérer tous les produits d'un bon de passage forfait"""
+    try:
+        cursor = conn.cursor()
+        
+        # Vérifier si le bon de passage existe
+        cursor.execute("SELECT * FROM Bon_Passage_Forfait WHERE id = ?", (bon_id,))
+        bon = cursor.fetchone()
+        
+        if bon is None:
+            raise HTTPException(status_code=404, detail="Bon de passage forfait non trouvé")
+        
+        cursor.execute("SELECT * FROM Bon_Passage_Forfait_Produits WHERE bon_passage_id = ?", (bon_id,))
+        produits = cursor.fetchall()
+        
+        return [dict(produit) for produit in produits]
+    except Exception as e:
+        print(f"Error fetching produits de bon de passage: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.post("/api/bon-passage-forfait/{bon_id}/produits", response_model=BonPassageForfaitProduitModel)
+async def create_produit_bon_passage(bon_id: int, produit: BonPassageForfaitProduitModel, conn = Depends(get_db)):
+    """Ajouter un produit à un bon de passage forfait"""
+    try:
+        cursor = conn.cursor()
+        
+        print(f"Attempting to create produit for bon_id={bon_id}, produit data: {produit}")
+        
+        # Vérifier si le bon de passage existe
+        cursor.execute("SELECT * FROM Bon_Passage_Forfait WHERE id = ?", (bon_id,))
+        bon = cursor.fetchone()
+        
+        if bon is None:
+            error_msg = f"Bon de passage forfait avec ID {bon_id} non trouvé"
+            print(error_msg)
+            raise HTTPException(status_code=404, detail=error_msg)
+        
+        # Insérer le produit
+        try:
+            cursor.execute("""
+                INSERT INTO Bon_Passage_Forfait_Produits (produit, qte, prix, bon_passage_id)
+                VALUES (?, ?, ?, ?) RETURNING *
+            """, (produit.produit, produit.qte, produit.prix, bon_id))
+            
+            new_produit = cursor.fetchone()
+            conn.commit()
+            
+            print(f"Produit created successfully: {new_produit}")
+            return dict(new_produit)
+        except Exception as sql_error:
+            print(f"SQL error creating produit: {str(sql_error)}")
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Erreur lors de l'insertion du produit: {str(sql_error)}"
+            )
+    except Exception as e:
+        print(f"Error creating produit de bon de passage: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.put("/api/bon-passage-forfait/{bon_id}/produits/{produit_id}", response_model=BonPassageForfaitProduitModel)
+async def update_produit_bon_passage(bon_id: int, produit_id: int, produit: BonPassageForfaitProduitModel, conn = Depends(get_db)):
+    """Mettre à jour un produit dans un bon de passage forfait"""
+    try:
+        cursor = conn.cursor()
+        
+        # Vérifier si le produit existe dans ce bon de passage
+        cursor.execute(
+            "SELECT * FROM Bon_Passage_Forfait_Produits WHERE id = ? AND bon_passage_id = ?", 
+            (produit_id, bon_id)
+        )
+        existing_produit = cursor.fetchone()
+        
+        if existing_produit is None:
+            raise HTTPException(status_code=404, detail="Produit non trouvé dans ce bon de passage")
+        
+        # Mettre à jour le produit
+        cursor.execute("""
+            UPDATE Bon_Passage_Forfait_Produits
+            SET produit = ?, qte = ?, prix = ?
+            WHERE id = ? AND bon_passage_id = ? RETURNING *
+        """, (produit.produit, produit.qte, produit.prix, produit_id, bon_id))
+        
+        updated_produit = cursor.fetchone()
+        conn.commit()
+        
+        return dict(updated_produit)
+    except Exception as e:
+        print(f"Error updating produit de bon de passage: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.delete("/api/bon-passage-forfait/{bon_id}/produits/{produit_id}")
+async def delete_produit_bon_passage(bon_id: int, produit_id: int, conn = Depends(get_db)):
+    """Supprimer un produit d'un bon de passage forfait"""
+    try:
+        cursor = conn.cursor()
+        
+        # Vérifier si le produit existe dans ce bon de passage
+        cursor.execute(
+            "SELECT * FROM Bon_Passage_Forfait_Produits WHERE id = ? AND bon_passage_id = ?", 
+            (produit_id, bon_id)
+        )
+        produit = cursor.fetchone()
+        
+        if produit is None:
+            raise HTTPException(status_code=404, detail="Produit non trouvé dans ce bon de passage")
+        
+        # Supprimer le produit
+        cursor.execute(
+            "DELETE FROM Bon_Passage_Forfait_Produits WHERE id = ? AND bon_passage_id = ?", 
+            (produit_id, bon_id)
+        )
+        conn.commit()
+        
+        return {"message": "Produit supprimé avec succès du bon de passage"}
+    except Exception as e:
+        print(f"Error deleting produit de bon de passage: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+# Endpoints pour les services dans un bon de passage
+@app.get("/api/bon-passage-forfait/{bon_id}/services", response_model=List[BonPassageForfaitServiceModel])
+async def get_services_bon_passage(bon_id: int, conn = Depends(get_db)):
+    """Récupérer tous les services d'un bon de passage forfait"""
+    try:
+        cursor = conn.cursor()
+        
+        # Vérifier si le bon de passage existe
+        cursor.execute("SELECT * FROM Bon_Passage_Forfait WHERE id = ?", (bon_id,))
+        bon = cursor.fetchone()
+        
+        if bon is None:
+            raise HTTPException(status_code=404, detail="Bon de passage forfait non trouvé")
+        
+        cursor.execute("SELECT * FROM Bon_Passage_Forfait_Services WHERE bon_passage_id = ?", (bon_id,))
+        services = cursor.fetchall()
+        
+        return [dict(service) for service in services]
+    except Exception as e:
+        print(f"Error fetching services de bon de passage: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.post("/api/bon-passage-forfait/{bon_id}/services", response_model=BonPassageForfaitServiceModel)
+async def create_service_bon_passage(bon_id: int, service: BonPassageForfaitServiceModel, conn = Depends(get_db)):
+    """Ajouter un service à un bon de passage forfait"""
+    try:
+        cursor = conn.cursor()
+        
+        print(f"Attempting to create service for bon_id={bon_id}, service data: {service}")
+        
+        # Vérifier si le bon de passage existe
+        cursor.execute("SELECT * FROM Bon_Passage_Forfait WHERE id = ?", (bon_id,))
+        bon = cursor.fetchone()
+        
+        if bon is None:
+            error_msg = f"Bon de passage forfait avec ID {bon_id} non trouvé"
+            print(error_msg)
+            raise HTTPException(status_code=404, detail=error_msg)
+        
+        # Insérer le service
+        try:
+            cursor.execute("""
+                INSERT INTO Bon_Passage_Forfait_Services (service, qte, bon_passage_id)
+                VALUES (?, ?, ?) RETURNING *
+            """, (service.service, service.qte, bon_id))
+            
+            new_service = cursor.fetchone()
+            conn.commit()
+            
+            print(f"Service created successfully: {new_service}")
+            return dict(new_service)
+        except Exception as sql_error:
+            print(f"SQL error creating service: {str(sql_error)}")
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Erreur lors de l'insertion du service: {str(sql_error)}"
+            )
+    except Exception as e:
+        print(f"Error creating service de bon de passage: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.put("/api/bon-passage-forfait/{bon_id}/services/{service_id}", response_model=BonPassageForfaitServiceModel)
+async def update_service_bon_passage(bon_id: int, service_id: int, service: BonPassageForfaitServiceModel, conn = Depends(get_db)):
+    """Mettre à jour un service dans un bon de passage forfait"""
+    try:
+        cursor = conn.cursor()
+        
+        # Vérifier si le service existe dans ce bon de passage
+        cursor.execute(
+            "SELECT * FROM Bon_Passage_Forfait_Services WHERE id = ? AND bon_passage_id = ?", 
+            (service_id, bon_id)
+        )
+        existing_service = cursor.fetchone()
+        
+        if existing_service is None:
+            raise HTTPException(status_code=404, detail="Service non trouvé dans ce bon de passage")
+        
+        # Mettre à jour le service
+        cursor.execute("""
+            UPDATE Bon_Passage_Forfait_Services
+            SET service = ?, qte = ?
+            WHERE id = ? AND bon_passage_id = ? RETURNING *
+        """, (service.service, service.qte, service_id, bon_id))
+        
+        updated_service = cursor.fetchone()
+        conn.commit()
+        
+        return dict(updated_service)
+    except Exception as e:
+        print(f"Error updating service de bon de passage: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")
+
+@app.delete("/api/bon-passage-forfait/{bon_id}/services/{service_id}")
+async def delete_service_bon_passage(bon_id: int, service_id: int, conn = Depends(get_db)):
+    """Supprimer un service d'un bon de passage forfait"""
+    try:
+        cursor = conn.cursor()
+        
+        # Vérifier si le service existe dans ce bon de passage
+        cursor.execute(
+            "SELECT * FROM Bon_Passage_Forfait_Services WHERE id = ? AND bon_passage_id = ?", 
+            (service_id, bon_id)
+        )
+        service = cursor.fetchone()
+        
+        if service is None:
+            raise HTTPException(status_code=404, detail="Service non trouvé dans ce bon de passage")
+        
+        # Supprimer le service
+        cursor.execute(
+            "DELETE FROM Bon_Passage_Forfait_Services WHERE id = ? AND bon_passage_id = ?", 
+            (service_id, bon_id)
+        )
+        conn.commit()
+        
+        return {"message": "Service supprimé avec succès du bon de passage"}
+    except Exception as e:
+        print(f"Error deleting service de bon de passage: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de serveur: {str(e)}")

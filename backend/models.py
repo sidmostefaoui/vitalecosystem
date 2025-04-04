@@ -6,6 +6,7 @@ import re
 
 
 class Client(BaseModel):
+    """Base client model for Client_Forfait table"""
     nom: str
     specialite: str
     mode_passage: int
@@ -216,18 +217,18 @@ class VersementBonAchat(BaseModel):
             )
         return v
 
-# Client model for the new Client table
+# Client model for the Client_Forfait table
 class ClientModel(BaseModel):
-    """Client model"""
+    """Client_Forfait model"""
     id: Optional[int] = None
     nom: str
     specialite: Optional[str] = None
     tel: str
     mode: int
     agent: str
-    etat_contrat: str
-    debut_contrat: str
-    fin_contrat: str
+    etat_contrat: Optional[str] = None
+    debut_contrat: Optional[str] = None
+    fin_contrat: Optional[str] = None
     
     @validator('tel')
     def validate_tel(cls, v):
@@ -244,6 +245,8 @@ class ClientModel(BaseModel):
     
     @validator('etat_contrat')
     def validate_etat_contrat(cls, v):
+        if v is None:
+            return None
         valid_etats = ['Actif', 'En Pause', 'Terminé']
         if v not in valid_etats:
             raise HTTPException(status_code=400, detail=f"L'état du contrat doit être l'un des suivants: {', '.join(valid_etats)}")
@@ -251,6 +254,8 @@ class ClientModel(BaseModel):
     
     @validator('debut_contrat', 'fin_contrat')
     def validate_date(cls, v):
+        if v is None:
+            return None
         # Validate date format dd/mm/yyyy
         try:
             datetime.strptime(v, '%d/%m/%Y')
@@ -265,7 +270,9 @@ class ContratForfaitModel(BaseModel):
     date_debut: str
     date_fin: str
     montant: int
+    prix_exces_poids: int
     client_id: int
+    etat: str = "Actif"
     
     @validator('date_debut', 'date_fin')
     def validate_date_format(cls, v):
@@ -302,6 +309,25 @@ class ContratForfaitModel(BaseModel):
                 detail="Le montant doit être supérieur à 0"
             )
         return v
+        
+    @validator('prix_exces_poids')
+    def validate_prix_exces_poids(cls, v):
+        if v <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Le prix d'excès de poids doit être supérieur à 0"
+            )
+        return v
+
+    @validator('etat')
+    def validate_etat(cls, v):
+        valid_etats = ['Actif', 'Pause', 'Terminé']
+        if v not in valid_etats:
+            raise HTTPException(
+                status_code=400,
+                detail=f"L'état du contrat doit être l'un des suivants: {', '.join(valid_etats)}"
+            )
+        return v
 
     class Config:
         schema_extra = {
@@ -309,6 +335,117 @@ class ContratForfaitModel(BaseModel):
                 "date_debut": "01/01/2024",
                 "date_fin": "31/12/2024",
                 "montant": 120000,
-                "client_id": 1
+                "prix_exces_poids": 1000,
+                "client_id": 1,
+                "etat": "Actif"
+            }
+        }
+
+# Bon de passage forfait models
+class BonPassageForfaitModel(BaseModel):
+    """Modèle pour bon de passage forfait"""
+    id: Optional[int] = None
+    date: str
+    client_id: int
+    montant: int = 0
+    exces_poids: int = 0
+    
+    @validator('date')
+    def validate_date_format(cls, v):
+        try:
+            datetime.strptime(v, '%d/%m/%Y')
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Format de date invalide. Utilisez le format dd/mm/yyyy"
+            )
+        return v
+    
+    @validator('montant')
+    def validate_montant(cls, v):
+        if v < 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Le montant ne peut pas être négatif"
+            )
+        return v
+    
+    @validator('exces_poids')
+    def validate_exces_poids(cls, v):
+        if v < 0:
+            raise HTTPException(
+                status_code=400,
+                detail="L'excès de poids ne peut pas être négatif"
+            )
+        return v
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "date": "15/05/2024",
+                "client_id": 1,
+                "montant": 5000,
+                "exces_poids": 10
+            }
+        }
+
+class BonPassageForfaitProduitModel(BaseModel):
+    """Modèle pour produit dans un bon de passage forfait"""
+    id: Optional[int] = None
+    produit: str
+    qte: float
+    prix: int
+    bon_passage_id: int
+    
+    @validator('qte')
+    def validate_qte(cls, v):
+        if v <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="La quantité doit être supérieure à 0"
+            )
+        return v
+    
+    @validator('prix')
+    def validate_prix(cls, v):
+        if v <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Le prix doit être supérieur à 0"
+            )
+        return v
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "produit": "Conteneur pour déchets 240L",
+                "qte": 2.0,
+                "prix": 5000,
+                "bon_passage_id": 1
+            }
+        }
+
+class BonPassageForfaitServiceModel(BaseModel):
+    """Modèle pour service dans un bon de passage forfait"""
+    id: Optional[int] = None
+    service: str
+    qte: Optional[float] = None
+    bon_passage_id: int
+    
+    @validator('qte')
+    def validate_qte(cls, v):
+        if v is not None and v <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="La quantité doit être supérieure à 0"
+            )
+        return v
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "service": "Collecte de déchets industriels",
+                "qte": 1.0,
+                "bon_passage_id": 1
             }
         }
