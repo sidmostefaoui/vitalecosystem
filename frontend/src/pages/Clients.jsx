@@ -109,7 +109,7 @@ const Clients = () => {
           case 'Actif':
             color = 'green';
             break;
-          case 'En Pause':
+          case 'Pause':
             color = 'orange';
             break;
           case 'Terminé':
@@ -445,7 +445,7 @@ const Clients = () => {
                   onChange={(e) => setNewClient({ ...newClient, etat_contrat: e.target.value })}
                 >
                   <MenuItem value="Actif">Actif</MenuItem>
-                  <MenuItem value="En Pause">En Pause</MenuItem>
+                  <MenuItem value="Pause">Pause</MenuItem>
                   <MenuItem value="Terminé">Terminé</MenuItem>
                 </Select>
               </FormControl>

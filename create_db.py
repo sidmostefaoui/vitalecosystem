@@ -218,7 +218,7 @@ CREATE TABLE Client_Forfait (
     tel TEXT NOT NULL,
     mode INTEGER NOT NULL CHECK (mode IN (30, 60, 90)),
     agent TEXT NOT NULL,
-    etat_contrat TEXT CHECK (etat_contrat IS NULL OR etat_contrat IN ('Actif', 'En Pause', 'Terminé')),
+    etat_contrat TEXT CHECK (etat_contrat IS NULL OR etat_contrat IN ('Actif', 'Pause', 'Terminé')),
     debut_contrat TEXT,
     fin_contrat TEXT
 )
@@ -247,6 +247,7 @@ CREATE TABLE Contrat_Forfait (
     date_fin TEXT NOT NULL,
     montant INTEGER NOT NULL CHECK (montant > 0),
     prix_exces_poids INTEGER NOT NULL CHECK (prix_exces_poids > 0),
+    poids_forfait INTEGER NOT NULL CHECK (poids_forfait > 0),
     etat TEXT NOT NULL DEFAULT 'Actif' CHECK (etat IN ('Actif', 'Pause', 'Terminé')),
     client_id INTEGER NOT NULL,
     FOREIGN KEY (client_id) REFERENCES Client_Forfait(id) ON DELETE CASCADE,
@@ -257,32 +258,32 @@ CREATE TABLE Contrat_Forfait (
 # Sample data for terminated contracts
 contrat_data = [
     # Terminated contracts for Algérie Telecom (Client ID 1)
-    ('01/01/2023', '30/06/2023', 100000, 500, 'Terminé', 1),
-    ('01/07/2023', '31/12/2023', 120000, 600, 'Terminé', 1),
+    ('01/01/2023', '30/06/2023', 100000, 500, 100, 'Terminé', 1),
+    ('01/07/2023', '31/12/2023', 120000, 600, 100, 'Terminé', 1),
     
     # Terminated contracts for SEAAL (Client ID 2)
-    ('01/03/2023', '31/08/2023', 150000, 700, 'Terminé', 2),
+    ('01/03/2023', '31/08/2023', 150000, 700, 100, 'Terminé', 2),
     
     # Terminated contracts for Clinique El Azhar (Client ID 3)
-    ('01/01/2023', '30/04/2023', 80000, 400, 'Terminé', 3),
-    ('01/05/2023', '31/08/2023', 85000, 450, 'Terminé', 3),
-    ('01/09/2023', '31/12/2023', 90000, 500, 'Terminé', 3),
+    ('01/01/2023', '30/04/2023', 80000, 400, 100, 'Terminé', 3),
+    ('01/05/2023', '31/08/2023', 85000, 450, 100, 'Terminé', 3),
+    ('01/09/2023', '31/12/2023', 90000, 500, 100, 'Terminé', 3),
     
     # Terminated contract for El Watan (Client ID 4)
-    ('01/01/2023', '31/03/2023', 60000, 300, 'Terminé', 4),
-    ('01/04/2023', '30/06/2023', 65000, 350, 'Terminé', 4),
-    ('01/07/2023', '30/09/2023', 70000, 400, 'Terminé', 4),
-    ('01/10/2023', '31/12/2023', 75000, 450, 'Terminé', 4),
+    ('01/01/2023', '31/03/2023', 60000, 300, 100, 'Terminé', 4),
+    ('01/04/2023', '30/06/2023', 65000, 350, 100, 'Terminé', 4),
+    ('01/07/2023', '30/09/2023', 70000, 400, 100, 'Terminé', 4),
+    ('01/10/2023', '31/12/2023', 75000, 450, 100, 'Terminé', 4),
     
     # Terminated contract for Air Algérie (Client ID 5)
-    ('01/01/2023', '31/03/2023', 200000, 1000, 'Terminé', 5),
-    ('01/04/2023', '30/06/2023', 220000, 1100, 'Terminé', 5),
-    ('01/07/2023', '31/12/2023', 240000, 1200, 'Terminé', 5)
+    ('01/01/2023', '31/03/2023', 200000, 1000, 100, 'Terminé', 5),
+    ('01/04/2023', '30/06/2023', 220000, 1100, 100, 'Terminé', 5),
+    ('01/07/2023', '31/12/2023', 240000, 1200, 100, 'Terminé', 5)
 ]
 
 cursor.executemany('''
-INSERT INTO Contrat_Forfait (date_debut, date_fin, montant, prix_exces_poids, etat, client_id)
-VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO Contrat_Forfait (date_debut, date_fin, montant, prix_exces_poids, poids_forfait, etat, client_id)
+VALUES (?, ?, ?, ?, ?, ?, ?)
 ''', contrat_data)
 
 # Create Bon_Passage_Forfait table
@@ -293,8 +294,11 @@ CREATE TABLE Bon_Passage_Forfait (
     date TEXT NOT NULL,
     montant INTEGER NOT NULL CHECK (montant >= 0),
     exces_poids INTEGER NOT NULL CHECK (exces_poids >= 0),
+    poids_collecte INTEGER NOT NULL CHECK (poids_collecte > 0),
     client_id INTEGER NOT NULL,
-    FOREIGN KEY (client_id) REFERENCES Client_Forfait(id) ON DELETE CASCADE
+    contrat_id INTEGER NOT NULL,
+    FOREIGN KEY (client_id) REFERENCES Client_Forfait(id) ON DELETE CASCADE,
+    FOREIGN KEY (contrat_id) REFERENCES Contrat_Forfait(id) ON DELETE CASCADE
 )
 ''')
 
@@ -320,6 +324,20 @@ CREATE TABLE Bon_Passage_Forfait_Services (
     qte REAL CHECK (qte IS NULL OR qte > 0),
     bon_passage_id INTEGER NOT NULL,
     FOREIGN KEY (bon_passage_id) REFERENCES Bon_Passage_Forfait(id) ON DELETE CASCADE
+)
+''')
+
+# Create Versement_Forfait table
+cursor.execute('DROP TABLE IF EXISTS Versement_Forfait')
+cursor.execute('''
+CREATE TABLE Versement_Forfait (
+    id INTEGER PRIMARY KEY,
+    date TEXT NOT NULL,
+    montant INTEGER NOT NULL CHECK (montant > 0),
+    client_id INTEGER NOT NULL,
+    contrat_id INTEGER NOT NULL,
+    FOREIGN KEY (client_id) REFERENCES Client_Forfait(id) ON DELETE CASCADE,
+    FOREIGN KEY (contrat_id) REFERENCES Contrat_Forfait(id) ON DELETE CASCADE
 )
 ''')
 

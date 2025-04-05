@@ -50,6 +50,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format, parse } from 'date-fns';
 import fr from 'date-fns/locale/fr';
 import { useParams, useNavigate } from 'react-router-dom';
+import VersementForfaitDialog from '../components/VersementForfaitDialog';
 
 /**
  * ClientProfile component displays a full page with client details, editable fields,
@@ -86,6 +87,7 @@ const ClientProfile = () => {
     consommables: [],
     services: [],
     exces_poids: 0,
+    poids_collecte: 0,
     montant: 0
   });
   const [produits, setProduits] = useState([]);
@@ -99,10 +101,13 @@ const ClientProfile = () => {
     date_fin: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
     montant: 0,
     prix_exces_poids: 0,
+    poids_forfait: 0,
     client_id: null,
     etat: 'Actif'
   });
   const [contracts, setContracts] = useState([]);
+  // Prix excès poids from active contract
+  const [prix_exces_poids, setPrixExcesPoids] = useState(0);
 
   // New state to track if we're editing a contract
   const [isEditingContract, setIsEditingContract] = useState(false);
@@ -115,6 +120,11 @@ const ClientProfile = () => {
 
   // Add new state for bon passage warning dialog
   const [openBonPassageWarningDialog, setOpenBonPassageWarningDialog] = useState(false);
+
+  // Add new states for versements
+  const [versements, setVersements] = useState([]);
+  const [openVersementDialog, setOpenVersementDialog] = useState(false);
+  const [selectedVersement, setSelectedVersement] = useState(null);
 
   // Fetch client data
   useEffect(() => {
@@ -132,15 +142,34 @@ const ClientProfile = () => {
         // Initialize form data with client data
         setFormData({
           ...clientData,
-          debut_contrat: clientData.debut_contrat ? parse(clientData.debut_contrat, 'dd/MM/yyyy', new Date()) : null,
-          fin_contrat: clientData.fin_contrat ? parse(clientData.fin_contrat, 'dd/MM/yyyy', new Date()) : null
+          debut_contrat: clientData.debut_contrat ? (() => {
+            try {
+              return parse(clientData.debut_contrat, 'dd/MM/yyyy', new Date());
+            } catch (error) {
+              console.error(`Error parsing debut_contrat date "${clientData.debut_contrat}":`, error);
+              return null;
+            }
+          })() : null,
+          fin_contrat: clientData.fin_contrat ? (() => {
+            try {
+              return parse(clientData.fin_contrat, 'dd/MM/yyyy', new Date());
+            } catch (error) {
+              console.error(`Error parsing fin_contrat date "${clientData.fin_contrat}":`, error);
+              return null;
+            }
+          })() : null
         });
 
         // Initialize bon de passage data with client ID
-        setBonPassageData(prev => ({
-          ...prev,
-          client_id: clientData.id
-        }));
+        setBonPassageData({
+          date: new Date(),
+          client_id: clientData.id,
+          consommables: [],
+          services: [],
+          exces_poids: 0,
+          poids_collecte: 0,
+          montant: 0
+        });
         
         // Initialize contract data with client ID
         setContractData(prev => ({
@@ -177,6 +206,9 @@ const ClientProfile = () => {
         
         // Fetch contracts for this client
         await fetchContracts(clientData.id);
+        
+        // Fetch versements for this client
+        await fetchVersements(clientData.id);
 
         setError(null);
       } catch (error) {
@@ -216,9 +248,34 @@ const ClientProfile = () => {
       }
       const data = await response.json();
       setContracts(data);
+      
+      // Find active contract to get prix_exces_poids
+      const activeContract = data.find(contract => contract.etat === 'Actif');
+      if (activeContract) {
+        setPrixExcesPoids(activeContract.prix_exces_poids);
+        console.log('Active contract found, prix_exces_poids:', activeContract.prix_exces_poids);
+      } else {
+        setPrixExcesPoids(0);
+        console.log('No active contract found');
+      }
     } catch (error) {
       console.error('Error fetching contracts:', error);
       showSnackbar(`Erreur lors du chargement des contrats: ${error.message}`, 'error');
+    }
+  };
+
+  // Fetch versements for this client
+  const fetchVersements = async (clientId) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/clients/${clientId}/versements-forfait`);
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+      const data = await response.json();
+      setVersements(data);
+    } catch (error) {
+      console.error('Error fetching versements:', error);
+      showSnackbar(`Erreur lors du chargement des versements: ${error.message}`, 'error');
     }
   };
 
@@ -248,39 +305,61 @@ const ClientProfile = () => {
 
   const saveClientData = async (field = null) => {
     try {
-      const dataToUpdate = { ...formData };
+      // Clone the form data to avoid modifying the original state
+      const dataToSave = { ...formData };
       
-      // Format dates only if they're not null
-      if (!field || field === 'debut_contrat' || field === 'fin_contrat') {
-        dataToUpdate.debut_contrat = dataToUpdate.debut_contrat ? format(dataToUpdate.debut_contrat, 'dd/MM/yyyy') : null;
-        dataToUpdate.fin_contrat = dataToUpdate.fin_contrat ? format(dataToUpdate.fin_contrat, 'dd/MM/yyyy') : null;
+      // Debug log
+      console.log('Original form data:', dataToSave);
+      
+      // Format dates only if they are valid Date objects
+      if (dataToSave.debut_contrat instanceof Date && !isNaN(dataToSave.debut_contrat)) {
+        dataToSave.debut_contrat = format(dataToSave.debut_contrat, 'dd/MM/yyyy');
+      } else if (dataToSave.debut_contrat === null || dataToSave.debut_contrat === undefined) {
+        dataToSave.debut_contrat = null;
       }
       
-      // Send the updated client to the API
+      if (dataToSave.fin_contrat instanceof Date && !isNaN(dataToSave.fin_contrat)) {
+        dataToSave.fin_contrat = format(dataToSave.fin_contrat, 'dd/MM/yyyy');
+      } else if (dataToSave.fin_contrat === null || dataToSave.fin_contrat === undefined) {
+        dataToSave.fin_contrat = null;
+      }
+      
+      // Debug log
+      console.log('Data being sent to server:', dataToSave);
+      
+      // Send the updated data to the server
       const response = await fetch(`http://localhost:8000/api/clients/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(dataToUpdate),
+        body: JSON.stringify(dataToSave),
       });
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(`${errorData.detail || response.statusText}`);
       }
       
-      // Update client data
       const updatedClient = await response.json();
-      setClient(updatedClient);
       
-      showSnackbar('Client modifié avec succès', 'success');
+      // Update the form data with the response
+      setFormData({
+        ...updatedClient,
+        debut_contrat: updatedClient.debut_contrat ? parse(updatedClient.debut_contrat, 'dd/MM/yyyy', new Date()) : null,
+        fin_contrat: updatedClient.fin_contrat ? parse(updatedClient.fin_contrat, 'dd/MM/yyyy', new Date()) : null
+      });
+      
+      // If a specific field was modified, disable its edit mode
+      if (field) {
+        setEditableFields({ ...editableFields, [field]: false });
+      }
+      
+      showSnackbar('Client mis à jour avec succès', 'success');
     } catch (error) {
-      showSnackbar(error.message || 'Erreur lors de la modification du client', 'error');
+      console.error('Error updating client:', error);
+      showSnackbar(`Erreur lors de la mise à jour du client: ${error.message}`, 'error');
     }
-  };
-
-  const handleSaveChanges = () => {
-    saveClientData();
   };
 
   const showSnackbar = (message, severity) => {
@@ -302,6 +381,14 @@ const ClientProfile = () => {
       setOpenBonPassageWarningDialog(true);
       return;
     }
+    
+    // Check if the contract is paused
+    if (formData.etat_contrat === 'Pause') {
+      // Use the same warning dialog but with a different message
+      setAttemptedAction('bonPassagePause');
+      setOpenWarningDialog(true);
+      return;
+    }
 
     setBonPassageData({
       date: new Date(),
@@ -309,6 +396,7 @@ const ClientProfile = () => {
       consommables: [],
       services: [],
       exces_poids: 0,
+      poids_collecte: 0,
       montant: 0
     });
     setOpenBonPassageDialog(true);
@@ -381,6 +469,11 @@ const ClientProfile = () => {
         showSnackbar('Veuillez ajouter au moins un consommable ou un service', 'error');
         return;
       }
+      
+      if (!bonPassageData.poids_collecte || parseInt(bonPassageData.poids_collecte) <= 0) {
+        showSnackbar('Le poids collecté doit être supérieur à 0', 'error');
+        return;
+      }
 
       // Validate consommables
       const invalidConsommables = bonPassageData.consommables.filter(c => !c.produit || !c.qte || !c.prix);
@@ -398,18 +491,14 @@ const ClientProfile = () => {
 
       const formattedDate = format(bonPassageData.date, 'dd/MM/yyyy');
       
-      // Calculate total from consommables if not already calculated
-      let totalMontant = bonPassageData.montant || 0;
-      if (totalMontant === 0 && bonPassageData.consommables.length > 0) {
-        totalMontant = bonPassageData.consommables.reduce((sum, item) => {
-          const quantity = parseFloat(item.qte) || 0;
-          const price = parseFloat(item.prix) || 0;
-          return sum + (quantity * price);
-        }, 0);
-      }
+      // Calculate total using our helper function
+      const totalMontant = calculateTotal();
       
       // Ensure exces_poids is never null
       const excesPoids = parseInt(bonPassageData.exces_poids) || 0;
+      const poidsCollecte = parseInt(bonPassageData.poids_collecte) || 0;
+      
+      console.log(`Total montant: ${totalMontant} (includes excess weight cost)`);
       
       // Create bon passage with explicit non-null values
       const bonPassageResponse = await fetch('http://localhost:8000/api/bon-passage-forfait', {
@@ -421,7 +510,8 @@ const ClientProfile = () => {
           date: formattedDate,
           client_id: bonPassageData.client_id,
           montant: totalMontant,
-          exces_poids: excesPoids
+          exces_poids: excesPoids,
+          poids_collecte: poidsCollecte
         }),
       });
 
@@ -505,6 +595,7 @@ const ClientProfile = () => {
       client_id: bon.client_id,
       exces_poids: bon.exces_poids || 0,
       montant: bon.montant || 0,
+      poids_collecte: bon.poids_collecte || 0,
       consommables: [],
       services: []
     });
@@ -596,6 +687,39 @@ const ClientProfile = () => {
         return;
       }
 
+      // Validate consommables
+      const invalidConsommables = bonPassageData.consommables.filter(c => !c.produit || !c.qte || !c.prix);
+      if (invalidConsommables.length > 0) {
+        showSnackbar('Tous les consommables doivent avoir un nom, une quantité et un prix', 'error');
+        return;
+      }
+
+      // Validate services
+      const invalidServices = bonPassageData.services.filter(s => !s.service);
+      if (invalidServices.length > 0) {
+        showSnackbar('Tous les services doivent avoir un nom', 'error');
+        return;
+      }
+
+      const formattedDate = format(bonPassageData.date, 'dd/MM/yyyy');
+      
+      // Calculate total from consommables
+      let totalMontant = bonPassageData.consommables.reduce((sum, item) => {
+        const quantity = parseFloat(item.qte) || 0;
+        const price = parseFloat(item.prix) || 0;
+        return sum + (quantity * price);
+      }, 0);
+      
+      // Ensure poids_collecte is not null
+      const poidsCollecte = parseInt(bonPassageData.poids_collecte) || 0;
+      
+      // Add cost of excess weight to total
+      const coutExcesPoids = parseInt(bonPassageData.exces_poids) * prix_exces_poids;
+      totalMontant += coutExcesPoids;
+      
+      console.log(`Excess weight: ${bonPassageData.exces_poids}kg at ${prix_exces_poids}/kg = ${coutExcesPoids}`);
+      console.log(`Total montant: ${totalMontant} (includes excess weight cost)`);
+      
       // Delete old bon passage
       const deleteResponse = await fetch(`http://localhost:8000/api/bon-passage-forfait/${selectedBonPassage.id}`, {
         method: 'DELETE'
@@ -604,18 +728,8 @@ const ClientProfile = () => {
       if (!deleteResponse.ok) {
         throw new Error(`Erreur lors de la suppression: ${deleteResponse.status}`);
       }
-      
+
       // Create new bon passage with modified data
-      const formattedDate = format(bonPassageData.date, 'dd/MM/yyyy');
-      
-      const totalMontant = bonPassageData.montant || bonPassageData.consommables.reduce((sum, item) => {
-        const quantity = parseFloat(item.qte) || 0;
-        const price = parseFloat(item.prix) || 0;
-        return sum + (quantity * price);
-      }, 0);
-      
-      const excesPoids = parseInt(bonPassageData.exces_poids) || 0;
-      
       const createResponse = await fetch('http://localhost:8000/api/bon-passage-forfait', {
         method: 'POST',
         headers: {
@@ -625,7 +739,8 @@ const ClientProfile = () => {
           date: formattedDate,
           client_id: client.id,
           montant: totalMontant,
-          exces_poids: excesPoids
+          exces_poids: bonPassageData.exces_poids,
+          poids_collecte: poidsCollecte
         }),
       });
 
@@ -705,6 +820,7 @@ const ClientProfile = () => {
         date_fin: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
         montant: 0,
         prix_exces_poids: 0,
+        poids_forfait: 0,
         client_id: client.id,
         etat: 'Actif'
       });
@@ -745,6 +861,7 @@ const ClientProfile = () => {
       date_fin: parse(contract.date_fin, 'dd/MM/yyyy', new Date()),
       montant: contract.montant,
       prix_exces_poids: contract.prix_exces_poids,
+      poids_forfait: contract.poids_forfait,
       client_id: contract.client_id,
       etat: contract.etat
     });
@@ -769,12 +886,18 @@ const ClientProfile = () => {
         return;
       }
 
+      if (contractData.poids_forfait <= 0) {
+        showSnackbar('Le poids forfaitaire doit être supérieur à 0', 'error');
+        return;
+      }
+
       const formattedContract = {
         ...contractData,
         date_debut: format(new Date(contractData.date_debut), 'dd/MM/yyyy'),
         date_fin: format(new Date(contractData.date_fin), 'dd/MM/yyyy'),
         montant: parseInt(contractData.montant),
-        prix_exces_poids: parseInt(contractData.prix_exces_poids)
+        prix_exces_poids: parseInt(contractData.prix_exces_poids),
+        poids_forfait: parseInt(contractData.poids_forfait)
       };
 
       const url = isEditingContract
@@ -797,6 +920,11 @@ const ClientProfile = () => {
       }
 
       const savedContract = await response.json();
+      
+      // Update prix_exces_poids if this is an active contract
+      if (savedContract.etat === 'Actif') {
+        setPrixExcesPoids(savedContract.prix_exces_poids);
+      }
       
       // Refresh contracts list
       await fetchContracts(client.id);
@@ -821,6 +949,7 @@ const ClientProfile = () => {
         date_fin: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
         montant: 0,
         prix_exces_poids: 0,
+        poids_forfait: 0,
         client_id: client.id,
         etat: 'Actif'
       });
@@ -854,11 +983,105 @@ const ClientProfile = () => {
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
       
+      // Refresh contracts list
+      await fetchContracts(client.id);
+      
+      // Update client data to reflect contract changes
+      const clientResponse = await fetch(`http://localhost:8000/api/clients/${client.id}`);
+      if (!clientResponse.ok) {
+        throw new Error(`Erreur HTTP: ${clientResponse.status}`);
+      }
+      const updatedClientData = await clientResponse.json();
+      setClient(updatedClientData);
+      
+      // Update form data with fresh client data
+      setFormData({
+        ...updatedClientData,
+        debut_contrat: updatedClientData.debut_contrat ? parse(updatedClientData.debut_contrat, 'dd/MM/yyyy', new Date()) : null,
+        fin_contrat: updatedClientData.fin_contrat ? parse(updatedClientData.fin_contrat, 'dd/MM/yyyy', new Date()) : null
+      });
+      
       showSnackbar('Contrat supprimé avec succès', 'success');
-      fetchContracts(client.id); // Refresh the list
     } catch (error) {
       console.error('Error deleting contract:', error);
       showSnackbar(`Erreur lors de la suppression: ${error.message}`, 'error');
+    }
+  };
+
+  // Calculate the total amount including excess weight cost
+  const calculateTotal = () => {
+    // Calculate base amount from consommables
+    const baseAmount = bonPassageData.consommables.reduce((sum, item) => {
+      const quantity = parseFloat(item.qte) || 0;
+      const price = parseFloat(item.prix) || 0;
+      return sum + (quantity * price);
+    }, 0);
+    
+    // Get excess weight cost from bonPassageData
+    const excesPoids = parseInt(bonPassageData.exces_poids) || 0;
+    const coutExcesPoids = excesPoids * prix_exces_poids;
+    
+    // Return total
+    return baseAmount + coutExcesPoids;
+  };
+
+  // Open versement dialog for creation
+  const handleOpenVersementDialog = () => {
+    setSelectedVersement(null);
+    setOpenVersementDialog(true);
+  };
+  
+  // Open versement dialog for editing
+  const handleEditVersement = (versement) => {
+    setSelectedVersement(versement);
+    setOpenVersementDialog(true);
+  };
+  
+  // Close versement dialog
+  const handleCloseVersementDialog = () => {
+    setOpenVersementDialog(false);
+    setSelectedVersement(null);
+  };
+  
+  // Save versement (create or update)
+  const handleSaveVersement = async (versement, isEdit) => {
+    try {
+      // Refresh the versements list
+      await fetchVersements(client.id);
+      
+      // Show success message
+      showSnackbar(
+        isEdit ? 'Versement mis à jour avec succès' : 'Versement créé avec succès', 
+        'success'
+      );
+    } catch (error) {
+      console.error('Error handling versement save:', error);
+      showSnackbar(`Erreur: ${error.message}`, 'error');
+    }
+  };
+  
+  // Delete versement
+  const handleDeleteVersement = async (id) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce versement ?')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`http://localhost:8000/api/versements-forfait/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+      
+      // Refresh the versements list
+      await fetchVersements(client.id);
+      
+      showSnackbar('Versement supprimé avec succès', 'success');
+    } catch (error) {
+      console.error('Error deleting versement:', error);
+      showSnackbar(`Erreur lors de la suppression du versement: ${error.message}`, 'error');
     }
   };
 
@@ -1039,8 +1262,7 @@ const ClientProfile = () => {
                   >
                     <MenuItem value="">Non défini</MenuItem>
                     <MenuItem value="Actif">Actif</MenuItem>
-                    <MenuItem value="En Pause">En Pause</MenuItem>
-                    <MenuItem value="Terminé">Terminé</MenuItem>
+                    <MenuItem value="Pause">Pause</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -1093,15 +1315,6 @@ const ClientProfile = () => {
                 </LocalizationProvider>
               </Grid>
             </Grid>
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-              <Button 
-                variant="contained" 
-                onClick={handleSaveChanges}
-                sx={{ minWidth: 150 }}
-              >
-                Enregistrer tout
-              </Button>
-            </Box>
           </Box>
 
           <Divider sx={{ my: 3 }} />
@@ -1144,6 +1357,7 @@ const ClientProfile = () => {
                     variant="contained"
                     startIcon={<AddIcon />}
                     sx={{ mx: 2 }}
+                    onClick={handleOpenVersementDialog}
                   >
                     Nouveau Versement
                   </Button>
@@ -1177,6 +1391,13 @@ const ClientProfile = () => {
                         headerName: 'Date', 
                         width: 150,
                         headerClassName: 'super-app-theme--header'
+                      },
+                      { 
+                        field: 'poids_collecte', 
+                        headerName: 'Poids collecté', 
+                        width: 150,
+                        headerClassName: 'super-app-theme--header',
+                        valueFormatter: (params) => `${params.value} kg`
                       },
                       { 
                         field: 'exces_poids', 
@@ -1239,9 +1460,73 @@ const ClientProfile = () => {
                 aria-labelledby="tab-1"
                 sx={{ p: 3, minHeight: '40vh' }}
               >
-                <Typography variant="body1" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                  Contenu des versements à venir...
-                </Typography>
+                <Box sx={{ height: 400, width: '100%' }}>
+                  <DataGrid
+                    rows={versements}
+                    columns={[
+                      { 
+                        field: 'date', 
+                        headerName: 'Date', 
+                        width: 150,
+                        headerClassName: 'super-app-theme--header'
+                      },
+                      { 
+                        field: 'montant', 
+                        headerName: 'Montant', 
+                        width: 150,
+                        flex: 1,
+                        headerClassName: 'super-app-theme--header',
+                        valueFormatter: (params) => `${params.value} DA`
+                      },
+                      {
+                        field: 'contrat_id',
+                        headerName: 'Contrat',
+                        width: 250,
+                        flex: 1,
+                        headerClassName: 'super-app-theme--header',
+                        renderCell: (params) => {
+                          const contract = contracts.find(c => c.id === params.value);
+                          return contract 
+                            ? `Du ${contract.date_debut} au ${contract.date_fin}`
+                            : `Contrat ID: ${params.value}`;
+                        }
+                      },
+                      {
+                        field: 'actions',
+                        type: 'actions',
+                        headerName: 'Actions',
+                        width: 120,
+                        headerClassName: 'super-app-theme--header',
+                        pinned: 'right',
+                        getActions: (params) => [
+                          <GridActionsCellItem
+                            icon={<EditIcon />}
+                            label="Modifier"
+                            onClick={() => handleEditVersement(params.row)}
+                            sx={{ color: '#FF9800', ml: 0.5 }}
+                          />,
+                          <GridActionsCellItem
+                            icon={<DeleteIcon />}
+                            label="Supprimer"
+                            onClick={() => handleDeleteVersement(params.row.id)}
+                            sx={{ color: 'red', ml: 0.5 }}
+                          />
+                        ],
+                      }
+                    ]}
+                    pageSize={5}
+                    rowsPerPageOptions={[5, 10, 25]}
+                    autoHeight
+                    disableColumnSelector
+                    hideFooterSelectedRowCount
+                    localeText={frFR.components.MuiDataGrid.defaultProps.localeText}
+                    sx={{
+                      '& .MuiDataGrid-columnHeaderTitle': {
+                        fontWeight: 'bold'
+                      }
+                    }}
+                  />
+                </Box>
               </Box>
               
               {/* Contrats Tab */}
@@ -1283,6 +1568,14 @@ const ClientProfile = () => {
                         flex: 1,
                         headerClassName: 'super-app-theme--header',
                         valueFormatter: (params) => `${params.value} DA/kg`
+                      },
+                      { 
+                        field: 'poids_forfait', 
+                        headerName: 'Poids forfait', 
+                        width: 150,
+                        flex: 1,
+                        headerClassName: 'super-app-theme--header',
+                        valueFormatter: (params) => `${params.value} kg`
                       },
                       { 
                         field: 'etat', 
@@ -1380,29 +1673,75 @@ const ClientProfile = () => {
           <Box sx={{ mt: 2 }}>
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
-                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={fr}>
-                  <DatePicker
-                    label="Date"
-                    value={bonPassageData.date}
-                    onChange={(newValue) => setBonPassageData({ ...bonPassageData, date: newValue })}
-                    slotProps={{ 
-                      textField: { 
-                        fullWidth: true, 
-                        margin: 'normal'
-                      } 
-                    }}
-                  />
-                </LocalizationProvider>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={fr}>
+              <DatePicker
+                label="Date"
+                value={bonPassageData.date}
+                onChange={(newValue) => setBonPassageData({ ...bonPassageData, date: newValue })}
+                slotProps={{ 
+                  textField: { 
+                    fullWidth: true, 
+                        margin: "normal"
+                  } 
+                }}
+              />
+            </LocalizationProvider>
               </Grid>
+              
+              {/* Poids collecté */}
               <Grid item xs={12} md={6}>
                 <TextField
+                  label="Poids collecté (kg)"
+                  value={bonPassageData.poids_collecte}
+                  onChange={(e) => {
+                    const poidsCollecte = parseInt(e.target.value) || 0;
+                    // Get contract's poids_forfait (from the active contract)
+                    const activeContract = contracts.find(c => c.etat === 'Actif');
+                    const poidsForfait = activeContract ? activeContract.poids_forfait : 0;
+                    // Calculate excess weight
+                    const excesPoids = Math.max(0, poidsCollecte - poidsForfait);
+                    
+                    setBonPassageData({
+                      ...bonPassageData,
+                      poids_collecte: e.target.value,
+                      exces_poids: excesPoids
+                    });
+                  }}
                   type="number"
-                  label="Excès de poids (kg)"
-                  value={bonPassageData.exces_poids}
-                  onChange={(e) => setBonPassageData({ ...bonPassageData, exces_poids: e.target.value })}
                   fullWidth
                   margin="normal"
-                  inputProps={{ min: "0" }}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">kg</InputAdornment>,
+                  }}
+                  helperText="Poids total des déchets collectés"
+                />
+              </Grid>
+              
+              {/* Excès de poids */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Excès de poids (kg)"
+                  value={bonPassageData.exces_poids}
+                  type="number"
+                  fullWidth
+                  margin="normal"
+                  disabled
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">kg</InputAdornment>,
+                  }}
+                  helperText="Calculé automatiquement selon le poids collecté et le forfait"
+                />
+              </Grid>
+              
+              {/* Display cost of excess weight */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Coût excès de poids"
+                  value={`${(parseInt(bonPassageData.exces_poids) || 0) * prix_exces_poids} DA`}
+                  fullWidth
+                  margin="normal"
+                  disabled
+                  helperText={`${prix_exces_poids} DA par kg (selon contrat actif)`}
                 />
               </Grid>
             </Grid>
@@ -1579,26 +1918,30 @@ const ClientProfile = () => {
         <DialogActions>
           <Box sx={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', px: 2 }}>
             <Typography variant="subtitle1" fontWeight="bold">
-              Total: {bonPassageData.montant.toLocaleString()} DA
+              Total: {calculateTotal().toLocaleString()} DA
             </Typography>
             <Box>
-              <Button onClick={handleCloseBonPassageDialog}>Annuler</Button>
-              <Button onClick={handleSubmitBonPassage} variant="contained">
-                Ajouter
+          <Button onClick={handleCloseBonPassageDialog}>Annuler</Button>
+              <Button 
+                onClick={handleSubmitBonPassage} 
+                variant="contained"
+                color="primary"
+              >
+                Enregistrer
               </Button>
             </Box>
           </Box>
         </DialogActions>
       </Dialog>
 
-      {/* Dialog for viewing/editing a bon de passage */}
+      {/* Dialog for viewing an existing bon de passage */}
       <Dialog 
         open={openViewBonPassageDialog} 
         onClose={handleCloseViewBonPassageDialog} 
         maxWidth="md" 
         fullWidth
       >
-        <DialogTitle>Modifier Bon de Passage</DialogTitle>
+        <DialogTitle>Voir Bon de passage</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
             <Grid container spacing={2}>
@@ -1611,21 +1954,63 @@ const ClientProfile = () => {
                     slotProps={{ 
                       textField: { 
                         fullWidth: true, 
-                        margin: 'normal'
+                        margin: "normal"
                       } 
                     }}
                   />
                 </LocalizationProvider>
               </Grid>
+              
               <Grid item xs={12} md={6}>
                 <TextField
+                  label="Poids collecté (kg)"
+                  value={bonPassageData.poids_collecte}
+                  onChange={(e) => {
+                    const poidsCollecte = parseInt(e.target.value) || 0;
+                    // Get contract's poids_forfait (from the active contract)
+                    const activeContract = contracts.find(c => c.etat === 'Actif');
+                    const poidsForfait = activeContract ? activeContract.poids_forfait : 0;
+                    // Calculate excess weight
+                    const excesPoids = Math.max(0, poidsCollecte - poidsForfait);
+                    
+                    setBonPassageData({
+                      ...bonPassageData,
+                      poids_collecte: e.target.value,
+                      exces_poids: excesPoids
+                    });
+                  }}
                   type="number"
-                  label="Excès de poids (kg)"
-                  value={bonPassageData.exces_poids}
-                  onChange={(e) => setBonPassageData({ ...bonPassageData, exces_poids: e.target.value })}
                   fullWidth
                   margin="normal"
-                  inputProps={{ min: "0" }}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">kg</InputAdornment>,
+                  }}
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Excès de poids (kg)"
+                  value={bonPassageData.exces_poids}
+                  type="number"
+                  fullWidth
+                  margin="normal"
+                  disabled
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">kg</InputAdornment>,
+                  }}
+                  helperText="Calculé automatiquement selon le poids collecté et le forfait"
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Coût excès de poids"
+                  value={`${(parseInt(bonPassageData.exces_poids) || 0) * prix_exces_poids} DA`}
+                  fullWidth
+                  margin="normal"
+                  disabled
+                  helperText={`${prix_exces_poids} DA par kg (selon contrat actif)`}
                 />
               </Grid>
             </Grid>
@@ -1664,13 +2049,6 @@ const ClientProfile = () => {
                               fullWidth
                             />
                           )}
-                          filterOptions={(options, params) => {
-                            const { inputValue } = params;
-                            const filtered = options.filter(option => 
-                              option.toLowerCase().includes(inputValue.toLowerCase())
-                            );
-                            return filtered;
-                          }}
                         />
                       </TableCell>
                       <TableCell align="center" sx={{ px: 1 }}>
@@ -1753,13 +2131,6 @@ const ClientProfile = () => {
                               fullWidth
                             />
                           )}
-                          filterOptions={(options, params) => {
-                            const { inputValue } = params;
-                            const filtered = options.filter(option => 
-                              option.toLowerCase().includes(inputValue.toLowerCase())
-                            );
-                            return filtered;
-                          }}
                         />
                       </TableCell>
                       <TableCell align="center" sx={{ px: 1 }}>
@@ -1802,11 +2173,15 @@ const ClientProfile = () => {
         <DialogActions>
           <Box sx={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', px: 2 }}>
             <Typography variant="subtitle1" fontWeight="bold">
-              Total: {bonPassageData.montant.toLocaleString()} DA
+              Total: {calculateTotal().toLocaleString()} DA
             </Typography>
             <Box>
               <Button onClick={handleCloseViewBonPassageDialog}>Annuler</Button>
-              <Button onClick={handleModifyBonPassage} variant="contained">
+              <Button 
+                onClick={handleModifyBonPassage} 
+                variant="contained"
+                color="primary"
+              >
                 Modifier
               </Button>
             </Box>
@@ -1876,6 +2251,17 @@ const ClientProfile = () => {
                 inputProps={{ min: "1" }}
               />
             </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Poids forfait (kg)"
+                type="number"
+                value={contractData.poids_forfait}
+                onChange={(e) => setContractData({ ...contractData, poids_forfait: e.target.value })}
+                fullWidth
+                margin="normal"
+                inputProps={{ min: "1" }}
+              />
+            </Grid>
             {isEditingContract && (
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth margin="normal">
@@ -1910,52 +2296,71 @@ const ClientProfile = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Contrat actif ou en pause existant</DialogTitle>
+        <DialogTitle>
+          {attemptedAction === 'bonPassagePause' 
+            ? 'Contrat en pause' 
+            : 'Contrat actif ou en pause existant'}
+        </DialogTitle>
         <DialogContent>
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            {attemptedAction === 'create' 
-              ? "Vous ne pouvez pas créer un nouveau contrat car il existe déjà un contrat actif ou en pause pour ce client."
-              : "Vous ne pouvez pas modifier ce contrat car il existe déjà un contrat actif ou en pause pour ce client."}
-          </Typography>
-          
-          {existingActiveContract && (
-            <Paper sx={{ p: 2, bgcolor: '#f5f5f5', mb: 2 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                Contrat {existingActiveContract.etat}:
+          {attemptedAction === 'bonPassagePause' ? (
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              Vous ne pouvez pas créer un bon de passage car le contrat du client est actuellement en pause.
+              <br /><br />
+              Veuillez d'abord réactiver le contrat avant de créer un bon de passage.
+            </Typography>
+          ) : (
+            <>
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                {attemptedAction === 'create' 
+                  ? "Vous ne pouvez pas créer un nouveau contrat car il existe déjà un contrat actif ou en pause pour ce client."
+                  : "Vous ne pouvez pas modifier ce contrat car il existe déjà un contrat actif ou en pause pour ce client."}
               </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Typography variant="body2">
-                    <strong>Date début:</strong> {existingActiveContract.date_debut}
+              
+              {existingActiveContract && (
+                <Paper sx={{ p: 2, bgcolor: '#f5f5f5', mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                    Contrat {existingActiveContract.etat}:
                   </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2">
-                    <strong>Date fin:</strong> {existingActiveContract.date_fin}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2">
-                    <strong>Montant:</strong> {existingActiveContract.montant} DA
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2">
-                    <strong>Prix excès:</strong> {existingActiveContract.prix_exces_poids} DA/kg
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2">
-                    <strong>État:</strong> {existingActiveContract.etat}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Paper>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <Typography variant="body2">
+                        <strong>Date début:</strong> {existingActiveContract.date_debut}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2">
+                        <strong>Date fin:</strong> {existingActiveContract.date_fin}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2">
+                        <strong>Montant:</strong> {existingActiveContract.montant} DA
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2">
+                        <strong>Prix excès:</strong> {existingActiveContract.prix_exces_poids} DA/kg
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2">
+                        <strong>Poids forfait:</strong> {existingActiveContract.poids_forfait} kg
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2">
+                        <strong>État:</strong> {existingActiveContract.etat}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              )}
+              
+              <Typography variant="body1">
+                Vous devez d'abord mettre à l'état "Terminé" le contrat existant avant de {attemptedAction === 'create' ? 'créer un nouveau contrat' : 'modifier celui-ci'}.
+              </Typography>
+            </>
           )}
-          
-          <Typography variant="body1">
-            Vous devez d'abord mettre à l'état "Terminé" le contrat existant avant de {attemptedAction === 'create' ? 'créer un nouveau contrat' : 'modifier celui-ci'}.
-          </Typography>
         </DialogContent>
         <DialogActions>
           <Button 
@@ -1963,7 +2368,7 @@ const ClientProfile = () => {
             variant="contained" 
             color="primary"
           >
-            Annuler
+            {attemptedAction === 'bonPassagePause' ? 'Compris' : 'Annuler'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -2000,6 +2405,16 @@ const ClientProfile = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Versement Dialog */}
+      <VersementForfaitDialog
+        open={openVersementDialog}
+        onClose={handleCloseVersementDialog}
+        clientId={client?.id}
+        versement={selectedVersement}
+        onSave={handleSaveVersement}
+        contracts={contracts}
+      />
     </Container>
   );
 };

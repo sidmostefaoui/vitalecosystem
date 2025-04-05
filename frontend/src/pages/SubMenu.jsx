@@ -46,10 +46,12 @@ const SubMenu = ({ title }) => {
       {
         title: 'Versements',
         icon: <PaymentIcon sx={{ fontSize: 60 }} />,
+        onClick: () => navigate('/versements-forfait')
       },
       {
-        title: 'Bons de livraisons',
+        title: 'Bons de passage',
         icon: <ShippingIcon sx={{ fontSize: 60 }} />,
+        onClick: () => navigate('/bons-passage-forfait')
       },
     ];
   } 

@@ -22,6 +22,8 @@ import Produits_Services from './pages/Produits_Services';
 import Fournisseurs from './pages/Fournisseurs';
 import Bon_Achats from './pages/Bon_Achats';
 import Inventaire from './pages/Inventaire';
+import VersementsForfait from './pages/VersementsForfait';
+import BonsPassageForfait from './pages/BonsPassageForfait';
 import { theme } from './theme';
 
 /**
@@ -88,6 +90,8 @@ function AppContent() {
       navigate('/clients');
     } else if (location.pathname === '/fournisseurs' || location.pathname === '/bon-achats') {
       navigate('/achats');
+    } else if (location.pathname === '/versements-forfait' || location.pathname === '/bons-passage-forfait') {
+      navigate('/regime-forfait');
     } else {
       navigate('/dashboard');
     }
@@ -137,6 +141,8 @@ function AppContent() {
           <Route path="/inventaire" element={<Inventaire />} />
           <Route path="/fournisseurs" element={<Fournisseurs />} />
           <Route path="/bon-achats" element={<Bon_Achats />} />
+          <Route path="/versements-forfait" element={<VersementsForfait />} />
+          <Route path="/bons-passage-forfait" element={<BonsPassageForfait />} />
           <Route path="/" element={<Navigate replace to="/dashboard" />} />
         </Routes>
       </Container>
