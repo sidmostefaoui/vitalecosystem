@@ -21,11 +21,6 @@ app = "vitalecosystem"
   min_machines_running = 0    # Minimum number of machines to keep running
   processes = ["app"]         # Process group that serves HTTP requests
 
-# Persistent storage - configure volumes for storing data across deployments
-[mounts]
-  source = "vitalecosystem_data"       # Name of the volume in Fly.io
-  destination = "/app/database/prod/"      # Path where the volume is mounted in the container
-
 # Service definition - configures how your app exposes services to the internet
 [[services]]
   protocol = "tcp"            # Using TCP protocol
