@@ -23,7 +23,7 @@ app = "vitalecosystem"
 
 # Persistent storage - configure volumes for storing data across deployments
 [mounts]
-  source = "vitalecosystem_db"       # Name of the volume in Fly.io
+  source = "vitalecosystem_data"       # Name of the volume in Fly.io
   destination = "/app/database/prod/"      # Path where the volume is mounted in the container
 
 # Service definition - configures how your app exposes services to the internet
@@ -32,33 +32,33 @@ app = "vitalecosystem"
   internal_port = 8080          # Port inside the container
   processes = ["app"]         # Process group that handles this service
 
-  # HTTP port configuration
-  [[services.ports]]
-    port = 80                 # External HTTP port
-    handlers = ["http"]       # HTTP handler
-    force_https = false        # Redirect HTTP to HTTPS
+# HTTP port configuration
+[[services.ports]]
+  port = 80                 # External HTTP port
+  handlers = ["http"]       # HTTP handler
+  force_https = false        # Redirect HTTP to HTTPS
 
-  # HTTPS port configuration
-  [[services.ports]]
-    port = 443                # External HTTPS port
-    handlers = ["tls", "http"] # TLS and HTTP handlers
+# HTTPS port configuration
+[[services.ports]]
+  port = 443                # External HTTPS port
+  handlers = ["tls", "http"] # TLS and HTTP handlers
 
-  # Concurrency settings - limits on concurrent connections
-  [services.concurrency]
-    type = "connections"      # Limit based on connection count
-    hard_limit = 25           # Maximum allowed connections
-    soft_limit = 20           # Target number of connections
+# Concurrency settings - limits on concurrent connections
+[services.concurrency]
+  type = "connections"      # Limit based on connection count
+  hard_limit = 25           # Maximum allowed connections
+  soft_limit = 20           # Target number of connections
 
-  # Health check configuration - ensures the app is responding
-  [[services.http_checks]]
-    interval = "10s"          # Check every 10 seconds
-    timeout = "2s"            # Timeout after 2 seconds
-    grace_period = "5s"       # Allow 5 seconds before first check
-    restart_limit = 0         # Number of failures before restarting
-    method = "get"            # HTTP method for health check
-    path = "/api/health"      # Path to check (API health endpoint)
-    protocol = "http"         # Protocol to use for health check
+# Health check configuration - ensures the app is responding
+[[services.http_checks]]
+  interval = "10s"          # Check every 10 seconds
+  timeout = "2s"            # Timeout after 2 seconds
+  grace_period = "5s"       # Allow 5 seconds before first check
+  restart_limit = 0         # Number of failures before restarting
+  method = "get"            # HTTP method for health check
+  path = "/api/health"      # Path to check (API health endpoint)
+  protocol = "http"         # Protocol to use for health check
 
 # Experimental features - opt-in to newer Fly.io capabilities
 [experimental]
-  auto_rollback = true        # Automatically rollback failed deployments 
+auto_rollback = true        # Automatically rollback failed deployments 
