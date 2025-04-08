@@ -10,12 +10,11 @@ app = "vitalecosystem"
 # Environment variables - non-sensitive configuration available to the app
 # For sensitive information, use fly secrets instead
 [env]
-  PORT = "80"
   VITAL_ENV = "PROD"
 
 # HTTP service configuration - defines how the app handles HTTP traffic
 [http_service]
-  internal_port = 80          # Port the app listens on inside the container
+  internal_port = 8080          # Port the app listens on inside the container
   force_https = true          # Redirect HTTP to HTTPS
   auto_stop_machines = true   # Stop machines when not in use (save resources)
   auto_start_machines = true  # Start machines when traffic arrives
@@ -24,20 +23,20 @@ app = "vitalecosystem"
 
 # Persistent storage - configure volumes for storing data across deployments
 [mounts]
-  source = "vitalecosystem_data"       # Name of the volume in Fly.io
+  source = "vitalecosystem_db"       # Name of the volume in Fly.io
   destination = "/app/database/prod/"      # Path where the volume is mounted in the container
 
 # Service definition - configures how your app exposes services to the internet
 [[services]]
   protocol = "tcp"            # Using TCP protocol
-  internal_port = 80          # Port inside the container
+  internal_port = 8080          # Port inside the container
   processes = ["app"]         # Process group that handles this service
 
   # HTTP port configuration
   [[services.ports]]
     port = 80                 # External HTTP port
     handlers = ["http"]       # HTTP handler
-    force_https = true        # Redirect HTTP to HTTPS
+    force_https = false        # Redirect HTTP to HTTPS
 
   # HTTPS port configuration
   [[services.ports]]
