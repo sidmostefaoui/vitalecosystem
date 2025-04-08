@@ -1,0 +1,65 @@
+# App name - unique identifier for your application on Fly.io
+app = "vitalecosystem"
+
+# Build configuration - settings for how the app is built
+[build]
+  # Build arguments passed to the Docker build process
+  [build.args]
+    PYTHON_VERSION = "3.11"
+
+# Environment variables - non-sensitive configuration available to the app
+# For sensitive information, use fly secrets instead
+[env]
+  PORT = "8080"
+  VITAL_ENV = "PROD"
+
+# HTTP service configuration - defines how the app handles HTTP traffic
+[http_service]
+  internal_port = 8080        # Port the app listens on inside the container
+  force_https = true          # Redirect HTTP to HTTPS
+  auto_stop_machines = true   # Stop machines when not in use (save resources)
+  auto_start_machines = true  # Start machines when traffic arrives
+  min_machines_running = 0    # Minimum number of machines to keep running
+  processes = ["app"]         # Process group that serves HTTP requests
+
+# Persistent storage - configure volumes for storing data across deployments
+[mounts]
+  source = "vitalecosystem_data"       # Name of the volume in Fly.io
+  destination = "/app/database/prod/"      # Path where the volume is mounted in the container
+
+# Service definition - configures how your app exposes services to the internet
+[[services]]
+  protocol = "tcp"            # Using TCP protocol
+  internal_port = 8080        # Port inside the container
+  processes = ["app"]         # Process group that handles this service
+
+  # HTTP port configuration
+  [[services.ports]]
+    port = 80                 # External HTTP port
+    handlers = ["http"]       # HTTP handler
+    force_https = true        # Redirect HTTP to HTTPS
+
+  # HTTPS port configuration
+  [[services.ports]]
+    port = 443                # External HTTPS port
+    handlers = ["tls", "http"] # TLS and HTTP handlers
+
+  # Concurrency settings - limits on concurrent connections
+  [services.concurrency]
+    type = "connections"      # Limit based on connection count
+    hard_limit = 25           # Maximum allowed connections
+    soft_limit = 20           # Target number of connections
+
+  # Health check configuration - ensures the app is responding
+  [[services.http_checks]]
+    interval = "10s"          # Check every 10 seconds
+    timeout = "2s"            # Timeout after 2 seconds
+    grace_period = "5s"       # Allow 5 seconds before first check
+    restart_limit = 0         # Number of failures before restarting
+    method = "get"            # HTTP method for health check
+    path = "/api/health"      # Path to check (API health endpoint)
+    protocol = "http"         # Protocol to use for health check
+
+# Experimental features - opt-in to newer Fly.io capabilities
+[experimental]
+  auto_rollback = true        # Automatically rollback failed deployments 

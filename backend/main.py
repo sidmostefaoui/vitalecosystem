@@ -5,7 +5,9 @@ import sqlite3
 import os
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from models import (Agent, Produit, Service, Fournisseur, BonAchats, ProduitBonAchat, 
                     Inventaire, VersementBonAchat, ClientModel, ContratForfaitModel, 
                     BonPassageForfaitModel, BonPassageForfaitProduitModel,
@@ -13,10 +15,19 @@ from models import (Agent, Produit, Service, Fournisseur, BonAchats, ProduitBonA
 from pydantic import BaseModel, validator, Field
 from datetime import date, datetime
 
+
+env = os.getenv("VITAL_ENV")
+
+
 # Database connection setup
 def get_db():
     """Get a database connection."""
-    db_path = "db/db.sqlite"
+    
+    if env == "DEV":
+        db_path = "../database/dev/db.sqlite"
+    elif env == "PROD":
+        db_path = "../database/prod/db.sqlite"
+
     if not os.path.exists(db_path):
         raise HTTPException(status_code=500, detail=f"Database file not found: {db_path}")
     
@@ -42,6 +53,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Health check endpoint for Fly.io
+@app.get("/api/health")
+async def health_check():
+    return {"status": "healthy"}
+
 def recalculate_montant_verse(bon_id: int, cursor):
     """Recalculate the total montant_verse for a bon d'achat based on versements"""
     cursor.execute("SELECT SUM(montant) FROM Versement_Bon_Achat WHERE bon_achat_id = ?", (bon_id,))
@@ -54,6 +70,17 @@ def recalculate_montant_verse(bon_id: int, cursor):
         (total_versements, bon_id)
     )
     return total_versements
+
+
+if env == "PROD":
+    app.mount("/assets", StaticFiles(directory="../frontend/dist/assets"), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_react_app(full_path: str):
+        index_path = "../frontend/dist/index.html"
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+        return {"error": "index.html not found"}
 
 # Agent endpoints
 @app.get("/api/agents", response_model=List[Agent])

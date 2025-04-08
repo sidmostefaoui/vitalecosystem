@@ -3,6 +3,11 @@ description:
 globs: 
 alwaysApply: true
 ---
+---
+description: 
+globs: 
+alwaysApply: true
+---
 
 Guidelines for how I want the agent to interact with me, what to do and what not to do:
 

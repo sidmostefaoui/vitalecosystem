@@ -10,6 +10,7 @@ Set-Location backend
 try { 
     # Start the FastAPI server using uvicorn
     # Using host 127.0.0.1 to allow local access and port 8000
+    $env:VITAL_ENV = "DEV"
     uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 }
 finally {

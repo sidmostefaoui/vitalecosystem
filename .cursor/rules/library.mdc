@@ -1,4 +1,9 @@
 ---
+description: 
+globs: 
+alwaysApply: true
+---
+---
 description: When the external libraries are allowed.
 globs: 
 alwaysApply: true

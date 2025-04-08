@@ -1,4 +1,9 @@
 ---
+description: 
+globs: 
+alwaysApply: true
+---
+---
 description: Project description and requirements
 globs: 
 alwaysApply: true

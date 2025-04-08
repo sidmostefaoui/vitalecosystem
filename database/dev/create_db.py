@@ -9,7 +9,7 @@ import os
 os.makedirs('backend/db', exist_ok=True)
 
 # Connect to the database (this will create it if it doesn't exist)
-conn = sqlite3.connect('backend/db/db.sqlite')
+conn = sqlite3.connect('db.sqlite')
 cursor = conn.cursor()
 
 # Add this line to enable foreign key constraints

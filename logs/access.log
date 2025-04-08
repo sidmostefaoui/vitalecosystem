@@ -1,0 +1,242 @@
+2025-04-08 04:13:10,407 INFO Starting production server on 0.0.0.0:8080
+2025-04-08 04:13:10,413 INFO Serving on http://0.0.0.0:8080
+2025-04-08 04:13:34,395 ERROR Exception while serving /
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:13:34,501 ERROR Exception while serving /favicon.ico
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:13:38,995 ERROR Exception while serving /
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:13:39,319 ERROR Exception while serving /favicon.ico
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:13:42,318 ERROR Exception while serving /docs
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:13:42,386 ERROR Exception while serving /favicon.ico
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:13:47,660 ERROR Exception while serving /api/clients
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:13:47,976 ERROR Exception while serving /favicon.ico
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:13:49,531 ERROR Exception while serving /api/clients
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:13:49,587 ERROR Exception while serving /favicon.ico
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:21:31,344 INFO Starting production server on 0.0.0.0:8080
+2025-04-08 04:21:31,349 INFO Serving on http://0.0.0.0:8080
+2025-04-08 04:21:43,452 ERROR Exception while serving /
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:21:43,564 ERROR Exception while serving /favicon.ico
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:22:13,319 ERROR Exception while serving /
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:22:13,626 ERROR Exception while serving /favicon.ico
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:22:16,764 ERROR Exception while serving /home
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:22:16,829 ERROR Exception while serving /favicon.ico
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:22:18,072 ERROR Exception while serving /home
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:22:18,393 ERROR Exception while serving /favicon.ico
+Traceback (most recent call last):
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\channel.py", line 430, in service
+    task.service()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 167, in service
+    self.execute()
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\task.py", line 435, in execute
+    app_iter = self.channel.server.application(environ, start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sid\Desktop\vitalecosystem\backend\.venv_prod\Lib\site-packages\waitress\proxy_headers.py", line 64, in translate_proxy_headers
+    return app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: FastAPI.__call__() missing 1 required positional argument: 'send'
+2025-04-08 04:32:49,205 INFO Starting production server with uvicorn on 0.0.0.0:8080
+2025-04-08 04:38:11,092 INFO Starting production server with uvicorn on 0.0.0.0:8080
+2025-04-08 04:51:16,908 INFO Starting production server with uvicorn on 0.0.0.0:8080
+2025-04-08 05:00:49,590 INFO Starting production server with uvicorn on 0.0.0.0:8080
