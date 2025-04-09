@@ -8,6 +8,8 @@
 .idea
 *.swp
 *.swo
+.cursor/
+*.mdc
 
 # Python
 __pycache__/
@@ -29,6 +31,8 @@ frontend/yarn-error.log
 # Build files
 frontend/dist/
 frontend/build/
+backend/.venv/
+
 
 # Environment
 .env
@@ -39,6 +43,12 @@ env/
 
 # Fly.io
 fly.toml
+
+# TODO
+TODO.txt
+
+start_backend.ps1
+start_frontend.ps1
 
 # Docker
 .dockerignore
