@@ -7,6 +7,7 @@ import {
   Alert
 } from '@mui/material';
 import { DataGrid, frFR } from '@mui/x-data-grid';
+import { API_URL } from '../App';
 
 /**
  * Inventaire component - Displays a list of products in inventory with quantities and last prices
@@ -23,7 +24,7 @@ const Inventaire = () => {
   const fetchInventory = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/api/inventaire');
+      const response = await fetch(`${API_URL}/inventaire`);
       
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);

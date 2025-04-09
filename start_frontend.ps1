@@ -9,6 +9,8 @@ Set-Location frontend
 
 try {
     # Start the Vite development server
+    $env:VITAL_ENV = "DEV"
+    $env:VITE_API_URL = 'http://localhost:8080/api'
     npm run dev
 }
 finally {

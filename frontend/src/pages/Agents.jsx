@@ -29,6 +29,7 @@ import {
   CalendarMonth as CalendarIcon,
   Save as SaveIcon
 } from '@mui/icons-material';
+import { API_URL } from '../App';
 
 /**
  * Agents component - Displays a list of agents in a grid with CRUD operations
@@ -141,7 +142,7 @@ const Agents = () => {
   const checkApiHealth = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/api/agents');
+      const response = await fetch(`${API_URL}/agents`);
       if (response.status === 500) {
         const data = await response.json();
         throw new Error(data.detail || 'Erreur de serveur');
@@ -155,72 +156,154 @@ const Agents = () => {
 
   // Fetch agents from the API
   const fetchAgents = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const response = await fetch('http://localhost:8000/api/agents');
-      const data = await handleApiError(response);
+      const response = await fetch(`${API_URL}/agents`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
       setAgents(data);
+      setError(null);
     } catch (error) {
-      showSnackbar(error.message || 'Erreur lors du chargement des agents', 'error');
-      setAgents([]);
+      console.error('Error fetching agents:', error);
+      setError(`Error loading agents: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // Load agents on component mount
+  // Initialize the component
   useEffect(() => {
-    const loadData = async () => {
-      const isHealthy = await checkApiHealth();
-      if (isHealthy) {
-        await fetchAgents();
-      } else {
-        setLoading(false);
-      }
-    };
-    
-    loadData();
+    fetchAgents();
   }, []);
 
+  // Handle adding a new agent
   const handleAddAgent = async (e) => {
     e.preventDefault();
     
-    // Validate GPS coordinates
-    if (!validateGPS(newAgent.gps)) {
-      setGpsError('Format invalide. Utilisez: latitude,longitude (5 décimales). Ex: 36.75234, 3.04215');
+    // Validate the agent name is not empty
+    if (!newAgent.nom.trim()) {
+      setSnackbar({
+        open: true,
+        message: 'Le nom de l\'agent ne peut pas être vide',
+        severity: 'error'
+      });
       return;
     }
-
+    
     try {
-      // Send the new agent to the API
-      const response = await fetch('http://localhost:8000/api/agents', {
+      const response = await fetch(`${API_URL}/agents`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(newAgent),
       });
-
-      // Get the new agent with its ID from the response
-      const createdAgent = await handleApiError(response);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
       // Refresh the agents list
       await fetchAgents();
       
       // Reset form and close dialog
-      setNewAgent({
-        nom: '',
-        telephone: '',
-        whatsapp: '',
-        gps: '',
-        regime: 'Forfait',
-        notification: 'Actif'
-      });
-      setGpsError('');
+      setNewAgent({ nom: '', tel: '' });
       setIsAddingAgent(false);
-      showSnackbar('Agent ajouté avec succès', 'success');
+      
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: 'Agent ajouté avec succès',
+        severity: 'success'
+      });
     } catch (error) {
-      showSnackbar(error.message || 'Erreur lors de l\'ajout de l\'agent', 'error');
+      console.error('Error adding agent:', error);
+      setSnackbar({
+        open: true,
+        message: `Erreur: ${error.message}`,
+        severity: 'error'
+      });
+    }
+  };
+
+  // Handle updating an agent
+  const handleUpdateAgent = async (e) => {
+    e.preventDefault();
+    
+    // Validate the agent name is not empty
+    if (!currentAgent.nom.trim()) {
+      setSnackbar({
+        open: true,
+        message: 'Le nom de l\'agent ne peut pas être vide',
+        severity: 'error'
+      });
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API_URL}/agents/${currentAgent.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(currentAgent),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      // Refresh the agents list
+      await fetchAgents();
+      
+      // Close the dialog
+      setIsEditingAgent(false);
+      
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: 'Agent mis à jour avec succès',
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Error updating agent:', error);
+      setSnackbar({
+        open: true,
+        message: `Erreur: ${error.message}`,
+        severity: 'error'
+      });
+    }
+  };
+
+  // Handle deleting an agent
+  const handleDeleteAgent = async (id) => {
+    try {
+      const response = await fetch(`${API_URL}/agents/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      // Refresh the agents list
+      await fetchAgents();
+      
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: 'Agent supprimé avec succès',
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Error deleting agent:', error);
+      setSnackbar({
+        open: true,
+        message: `Erreur: ${error.message}`,
+        severity: 'error'
+      });
     }
   };
 
@@ -236,55 +319,6 @@ const Agents = () => {
     });
     setIsEditingAgent(true);
     setGpsError('');
-  };
-
-  const handleSaveEdit = async () => {
-    // Validate GPS if it's been edited
-    if (editableFields.gps && !validateGPS(currentAgent.gps)) {
-      setGpsError('Format invalide. Utilisez: latitude,longitude (5 décimales). Ex: 36.75234, 3.04215');
-      return;
-    }
-
-    try {
-      // Update the agent via the API
-      const response = await fetch(`http://localhost:8000/api/agents/${currentAgent.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(currentAgent),
-      });
-
-      await handleApiError(response);
-
-      // Refresh the agents list
-      await fetchAgents();
-      
-      setIsEditingAgent(false);
-      setCurrentAgent(null);
-      setGpsError('');
-      showSnackbar('Agent mis à jour avec succès', 'success');
-    } catch (error) {
-      showSnackbar(error.message || 'Erreur lors de la mise à jour de l\'agent', 'error');
-    }
-  };
-
-  const handleDeleteAgent = async (id) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet agent ?')) {
-      try {
-        const response = await fetch(`http://localhost:8000/api/agents/${id}`, {
-          method: 'DELETE',
-        });
-
-        await handleApiError(response);
-
-        // Refresh the agents list
-        await fetchAgents();
-        showSnackbar('Agent supprimé avec succès', 'success');
-      } catch (error) {
-        showSnackbar(error.message || 'Erreur lors de la suppression de l\'agent', 'error');
-      }
-    }
   };
 
   const toggleFieldEditability = (field) => {
@@ -308,10 +342,6 @@ const Agents = () => {
         setGpsError('');
       }
     }
-  };
-
-  const showSnackbar = (message, severity) => {
-    setSnackbar({ open: true, message, severity });
   };
 
   const handleCloseSnackbar = () => {
@@ -599,7 +629,7 @@ const Agents = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsEditingAgent(false)}>Annuler</Button>
-          <Button onClick={handleSaveEdit} variant="contained" color="primary">
+          <Button onClick={handleUpdateAgent} variant="contained" color="primary">
             Enregistrer
           </Button>
         </DialogActions>

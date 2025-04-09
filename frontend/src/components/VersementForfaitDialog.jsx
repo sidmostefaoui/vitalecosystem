@@ -12,13 +12,17 @@ import {
   Select,
   MenuItem,
   InputAdornment,
-  CircularProgress
+  CircularProgress,
+  Snackbar,
+  Alert,
+  Box
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format } from 'date-fns';
 import fr from 'date-fns/locale/fr';
+import { API_URL } from '../App';
 
 /**
  * Dialog component for creating or updating a versement forfait
@@ -117,7 +121,9 @@ const VersementForfaitDialog = ({
   };
   
   // Handle form submission
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
     if (!validateForm()) {
       return;
     }
@@ -125,53 +131,63 @@ const VersementForfaitDialog = ({
     setLoading(true);
     
     try {
-      // Format the data for submission
-      const formattedData = {
-        ...formData,
-        date: format(formData.date, 'dd/MM/yyyy'),
-        montant: parseInt(formData.montant)
-      };
+      // Format the date for submission
+      const formattedDate = format(formData.date, 'yyyy-MM-dd');
       
       let response;
-      
-      if (isEditMode) {
+      if (versement) {
         // Update existing versement
-        response = await fetch(`http://localhost:8000/api/versements-forfait/${versement.id}`, {
+        response = await fetch(`${API_URL}/versements-forfait/${versement.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(formattedData),
+          body: JSON.stringify({
+            ...formData,
+            date: formattedDate,
+          }),
         });
       } else {
         // Create new versement
-        response = await fetch('http://localhost:8000/api/versements-forfait', {
+        response = await fetch(`${API_URL}/versements-forfait`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(formattedData),
+          body: JSON.stringify({
+            ...formData,
+            date: formattedDate,
+          }),
         });
       }
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Une erreur est survenue');
+        throw new Error(errorData.detail || 'Erreur lors de la sauvegarde');
       }
       
-      const savedData = await response.json();
-      
-      onSave(savedData, isEditMode);
+      // Show success message and close dialog
+      showSnackbar('Versement sauvegardé avec succès', 'success');
+      onSave(await response.json(), isEditMode);
       onClose();
     } catch (error) {
       console.error('Error saving versement:', error);
-      setErrors({
-        ...errors,
-        submit: error.message
-      });
+      showSnackbar(`Erreur: ${error.message}`, 'error');
     } finally {
       setLoading(false);
     }
+  };
+  
+  // Snackbar state
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+  
+  // Function to show snackbar
+  const showSnackbar = (message, severity) => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
   };
   
   return (
@@ -255,6 +271,16 @@ const VersementForfaitDialog = ({
           {isEditMode ? 'Modifier' : 'Enregistrer'}
         </Button>
       </DialogActions>
+      
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+      >
+        <Alert onClose={() => setSnackbarOpen(false)} severity={snackbarSeverity}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Dialog>
   );
 };

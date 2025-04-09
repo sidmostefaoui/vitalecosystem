@@ -11,6 +11,7 @@ app = "vitalecosystem"
 # For sensitive information, use fly secrets instead
 [env]
   VITAL_ENV = "PROD"
+  VITE_API_URL = "vitalecosystem.fly.dev/api"
 
 # HTTP service configuration - defines how the app handles HTTP traffic
 [http_service]

@@ -12,9 +12,6 @@ from models import (Agent, Produit, Service, Fournisseur, BonAchats, ProduitBonA
                     Inventaire, VersementBonAchat, ClientModel, ContratForfaitModel, 
                     BonPassageForfaitModel, BonPassageForfaitProduitModel,
                     BonPassageForfaitServiceModel, VersementForfaitModel)
-from pydantic import BaseModel, validator, Field
-from datetime import date, datetime
-
 
 env = os.getenv("VITAL_ENV")
 
@@ -75,8 +72,8 @@ def recalculate_montant_verse(bon_id: int, cursor):
 if env == "PROD":
     app.mount("/assets", StaticFiles(directory="../frontend/dist/assets"), name="assets")
 
-    @app.get("/{full_path:path}")
-    async def serve_react_app(full_path: str):
+    @app.get("/")
+    async def serve_react_app():
         index_path = "../frontend/dist/index.html"
         if os.path.exists(index_path):
             return FileResponse(index_path)

@@ -1,9 +1,6 @@
-FROM python:3.11-slim
+FROM nikolaik/python-nodejs:python3.11-nodejs22-slim
 
 WORKDIR /app
-
-# Set environment variable for production
-ENV VITAL_ENV=PROD
 
 # Copy backend requirements and install them
 COPY backend/requirements.txt .
@@ -12,14 +9,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend code
 COPY backend/ backend/
 COPY database/ database/
-
-# Install Node.js and npm for frontend
-RUN apt-get update && apt-get install -y \
-    curl \
-    && curl -sL https://deb.nodesource.com/setup_16.x | bash - \
-    && apt-get install -y nodejs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
 
 # Copy frontend code and build it
 COPY frontend/ frontend/
@@ -38,6 +27,6 @@ RUN cd database/prod && python ../prod/create_db.py
 # Change to backend directory
 WORKDIR /app/backend
 
-
+EXPOSE 8080
 # Start the application from backend directory
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"] 

@@ -26,6 +26,9 @@ import VersementsForfait from './pages/VersementsForfait';
 import BonsPassageForfait from './pages/BonsPassageForfait';
 import { theme } from './theme';
 
+// API base URL constant
+export const API_URL = import.meta.env.VITE_API_URL;
+
 /**
  * Error Boundary component to catch rendering errors
  */

@@ -10,6 +10,7 @@ import {
 import { DataGrid, frFR } from '@mui/x-data-grid';
 import { format, parse } from 'date-fns';
 import fr from 'date-fns/locale/fr';
+import { API_URL } from '../App';
 
 /**
  * BonsPassageForfait page displays all bons de passage forfait in a DataGrid
@@ -21,45 +22,44 @@ const BonsPassageForfait = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch all necessary data when component mounts
+  // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         // Fetch bons de passage
-        const bonsPassageResponse = await fetch('http://localhost:8000/api/bon-passage-forfait');
+        const bonsPassageResponse = await fetch(`${API_URL}/bon-passage-forfait`);
         if (!bonsPassageResponse.ok) {
-          throw new Error(`Erreur HTTP ${bonsPassageResponse.status}`);
+          throw new Error(`Erreur HTTP: ${bonsPassageResponse.status}`);
         }
         const bonsPassageData = await bonsPassageResponse.json();
-
-        // Fetch clients
-        const clientsResponse = await fetch('http://localhost:8000/api/clients');
+        setBonsPassage(bonsPassageData);
+        
+        // Fetch clients for reference
+        const clientsResponse = await fetch(`${API_URL}/clients`);
         if (!clientsResponse.ok) {
-          throw new Error(`Erreur HTTP ${clientsResponse.status}`);
+          throw new Error(`Erreur HTTP: ${clientsResponse.status}`);
         }
         const clientsData = await clientsResponse.json();
+        setClients(clientsData);
         
-        // Fetch contracts
-        const contractsResponse = await fetch('http://localhost:8000/api/contrats-forfait');
+        // Fetch contracts for reference
+        const contractsResponse = await fetch(`${API_URL}/contrats-forfait`);
         if (!contractsResponse.ok) {
-          throw new Error(`Erreur HTTP ${contractsResponse.status}`);
+          throw new Error(`Erreur HTTP: ${contractsResponse.status}`);
         }
         const contractsData = await contractsResponse.json();
-
-        // Update state with fetched data
-        setBonsPassage(bonsPassageData);
-        setClients(clientsData);
         setContracts(contractsData);
+        
         setError(null);
       } catch (error) {
         console.error('Error fetching data:', error);
-        setError(`Erreur lors de la récupération des données: ${error.message}`);
+        setError(`Erreur lors du chargement des données: ${error.message}`);
       } finally {
         setLoading(false);
       }
     };
-
+    
     fetchData();
   }, []);
 

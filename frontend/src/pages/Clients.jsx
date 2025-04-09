@@ -31,6 +31,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format } from 'date-fns';
 import fr from 'date-fns/locale/fr';
 import { useNavigate } from 'react-router-dom';
+import { API_URL } from '../App';
 
 /**
  * Clients component - Manages clients data with creation and deletion operations
@@ -175,7 +176,7 @@ const Clients = () => {
   const fetchClients = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/clients');
+      const response = await fetch(`${API_URL}/clients`);
       const data = await handleApiError(response);
       setClients(data);
       setError(null);
@@ -190,7 +191,7 @@ const Clients = () => {
   // Fetch agents for the dropdown
   const fetchAgents = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/agents');
+      const response = await fetch(`${API_URL}/agents`);
       const data = await handleApiError(response);
       setAgents(data);
     } catch (error) {
@@ -243,7 +244,7 @@ const Clients = () => {
       };
       
       // Send the new client to the API
-      const response = await fetch('http://localhost:8000/api/clients', {
+      const response = await fetch(`${API_URL}/clients`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -284,7 +285,7 @@ const Clients = () => {
   const handleDeleteConfirm = async () => {
     try {
       // Send the delete request to the API
-      const response = await fetch(`http://localhost:8000/api/clients/${clientToDelete.id}`, {
+      const response = await fetch(`${API_URL}/clients/${clientToDelete.id}`, {
         method: 'DELETE',
       });
 

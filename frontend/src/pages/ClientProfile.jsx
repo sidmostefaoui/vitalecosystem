@@ -51,6 +51,7 @@ import { format, parse } from 'date-fns';
 import fr from 'date-fns/locale/fr';
 import { useParams, useNavigate } from 'react-router-dom';
 import VersementForfaitDialog from '../components/VersementForfaitDialog';
+import { API_URL } from '../App';
 
 /**
  * ClientProfile component displays a full page with client details, editable fields,
@@ -132,7 +133,7 @@ const ClientProfile = () => {
       setLoading(true);
       try {
         // Fetch client
-        const clientResponse = await fetch(`http://localhost:8000/api/clients/${id}`);
+        const clientResponse = await fetch(`${API_URL}/clients/${id}`);
         if (!clientResponse.ok) {
           throw new Error(`Erreur HTTP: ${clientResponse.status}`);
         }
@@ -178,7 +179,7 @@ const ClientProfile = () => {
         }));
 
         // Fetch agents for dropdown
-        const agentsResponse = await fetch('http://localhost:8000/api/agents');
+        const agentsResponse = await fetch(`${API_URL}/agents`);
         if (!agentsResponse.ok) {
           throw new Error(`Erreur HTTP: ${agentsResponse.status}`);
         }
@@ -186,7 +187,7 @@ const ClientProfile = () => {
         setAgents(agentsData);
 
         // Fetch produits for consumables dropdown
-        const produitsResponse = await fetch('http://localhost:8000/api/produits');
+        const produitsResponse = await fetch(`${API_URL}/produits`);
         if (!produitsResponse.ok) {
           throw new Error(`Erreur HTTP: ${produitsResponse.status}`);
         }
@@ -194,7 +195,7 @@ const ClientProfile = () => {
         setProduits(produitsData);
 
         // Fetch services for services dropdown
-        const servicesResponse = await fetch('http://localhost:8000/api/services');
+        const servicesResponse = await fetch(`${API_URL}/services`);
         if (!servicesResponse.ok) {
           throw new Error(`Erreur HTTP: ${servicesResponse.status}`);
         }
@@ -224,58 +225,61 @@ const ClientProfile = () => {
     }
   }, [id]);
 
-  // Fetch bons de passage for this client
+  // Fetch bons de passage for the client
   const fetchBonsPassage = async (clientId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/clients/${clientId}/bon-passage-forfait`);
+      const response = await fetch(`${API_URL}/clients/${clientId}/bon-passage-forfait`);
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
       const data = await response.json();
       setBonsPassage(data);
+      return data;
     } catch (error) {
       console.error('Error fetching bons de passage:', error);
-      showSnackbar(`Erreur lors du chargement des bons de passage: ${error.message}`, 'error');
+      showSnackbar('Erreur lors du chargement des bons de passage', 'error');
+      return [];
     }
   };
 
-  // Fetch contracts for this client
+  // Fetch contracts for the client
   const fetchContracts = async (clientId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/clients/${clientId}/contrats-forfait`);
+      const response = await fetch(`${API_URL}/clients/${clientId}/contrats-forfait`);
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
       const data = await response.json();
       setContracts(data);
       
-      // Find active contract to get prix_exces_poids
+      // Set prix_exces_poids from the active contract if it exists
       const activeContract = data.find(contract => contract.etat === 'Actif');
       if (activeContract) {
-        setPrixExcesPoids(activeContract.prix_exces_poids);
-        console.log('Active contract found, prix_exces_poids:', activeContract.prix_exces_poids);
-      } else {
-        setPrixExcesPoids(0);
-        console.log('No active contract found');
+        setPrixExcesPoids(activeContract.prix_exces_poids || 0);
       }
+      
+      return data;
     } catch (error) {
       console.error('Error fetching contracts:', error);
-      showSnackbar(`Erreur lors du chargement des contrats: ${error.message}`, 'error');
+      showSnackbar('Erreur lors du chargement des contrats', 'error');
+      return [];
     }
   };
 
-  // Fetch versements for this client
+  // Fetch versements for the client
   const fetchVersements = async (clientId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/clients/${clientId}/versements-forfait`);
+      const response = await fetch(`${API_URL}/clients/${clientId}/versements-forfait`);
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
       const data = await response.json();
       setVersements(data);
+      return data;
     } catch (error) {
       console.error('Error fetching versements:', error);
-      showSnackbar(`Erreur lors du chargement des versements: ${error.message}`, 'error');
+      showSnackbar('Erreur lors du chargement des versements', 'error');
+      return [];
     }
   };
 
@@ -328,7 +332,7 @@ const ClientProfile = () => {
       console.log('Data being sent to server:', dataToSave);
       
       // Send the updated data to the server
-      const response = await fetch(`http://localhost:8000/api/clients/${id}`, {
+      const response = await fetch(`${API_URL}/clients/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -501,17 +505,17 @@ const ClientProfile = () => {
       console.log(`Total montant: ${totalMontant} (includes excess weight cost)`);
       
       // Create bon passage with explicit non-null values
-      const bonPassageResponse = await fetch('http://localhost:8000/api/bon-passage-forfait', {
+      const bonPassageResponse = await fetch(`${API_URL}/bon-passage-forfait`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          date: formattedDate,
           client_id: bonPassageData.client_id,
-          montant: totalMontant,
+          date: format(bonPassageData.date, 'yyyy-MM-dd'),
+          poids_collecte: poidsCollecte,
           exces_poids: excesPoids,
-          poids_collecte: poidsCollecte
+          montant: totalMontant
         }),
       });
 
@@ -537,7 +541,7 @@ const ClientProfile = () => {
         
         console.log('Sending produit data:', produitData);
         
-        const produitResponse = await fetch(`http://localhost:8000/api/bon-passage-forfait/${bonPassageId}/produits`, {
+        const produitResponse = await fetch(`${API_URL}/bon-passage-forfait/${bonPassageId}/produits`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -562,7 +566,7 @@ const ClientProfile = () => {
         
         console.log('Sending service data:', serviceData);
         
-        const serviceResponse = await fetch(`http://localhost:8000/api/bon-passage-forfait/${bonPassageId}/services`, {
+        const serviceResponse = await fetch(`${API_URL}/bon-passage-forfait/${bonPassageId}/services`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -610,7 +614,7 @@ const ClientProfile = () => {
   // Fetch products for a specific bon de passage
   const fetchBonPassageProducts = async (bonId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/bon-passage-forfait/${bonId}/produits`);
+      const response = await fetch(`${API_URL}/bon-passage-forfait/${bonId}/produits`);
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
@@ -632,7 +636,7 @@ const ClientProfile = () => {
   // Fetch services for a specific bon de passage
   const fetchBonPassageServices = async (bonId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/bon-passage-forfait/${bonId}/services`);
+      const response = await fetch(`${API_URL}/bon-passage-forfait/${bonId}/services`);
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
@@ -657,7 +661,7 @@ const ClientProfile = () => {
     }
     
     try {
-      const response = await fetch(`http://localhost:8000/api/bon-passage-forfait/${id}`, {
+      const response = await fetch(`${API_URL}/bon-passage-forfait/${id}`, {
         method: 'DELETE'
       });
       
@@ -721,7 +725,7 @@ const ClientProfile = () => {
       console.log(`Total montant: ${totalMontant} (includes excess weight cost)`);
       
       // Delete old bon passage
-      const deleteResponse = await fetch(`http://localhost:8000/api/bon-passage-forfait/${selectedBonPassage.id}`, {
+      const deleteResponse = await fetch(`${API_URL}/bon-passage-forfait/${selectedBonPassage.id}`, {
         method: 'DELETE'
       });
       
@@ -730,7 +734,7 @@ const ClientProfile = () => {
       }
 
       // Create new bon passage with modified data
-      const createResponse = await fetch('http://localhost:8000/api/bon-passage-forfait', {
+      const createResponse = await fetch(`${API_URL}/bon-passage-forfait`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -760,7 +764,7 @@ const ClientProfile = () => {
           bon_passage_id: bonPassageId
         };
         
-        const produitResponse = await fetch(`http://localhost:8000/api/bon-passage-forfait/${bonPassageId}/produits`, {
+        const produitResponse = await fetch(`${API_URL}/bon-passage-forfait/${bonPassageId}/produits`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -781,7 +785,7 @@ const ClientProfile = () => {
           bon_passage_id: bonPassageId
         };
         
-        const serviceResponse = await fetch(`http://localhost:8000/api/bon-passage-forfait/${bonPassageId}/services`, {
+        const serviceResponse = await fetch(`${API_URL}/bon-passage-forfait/${bonPassageId}/services`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -901,8 +905,8 @@ const ClientProfile = () => {
       };
 
       const url = isEditingContract
-        ? `http://localhost:8000/api/contrats-forfait/${selectedContract.id}`
-        : 'http://localhost:8000/api/contrats-forfait';
+        ? `${API_URL}/contrats-forfait/${selectedContract.id}`
+        : `${API_URL}/contrats-forfait`;
       
       const method = isEditingContract ? 'PUT' : 'POST';
       
@@ -930,7 +934,7 @@ const ClientProfile = () => {
       await fetchContracts(client.id);
       
       // Update client data to reflect contract changes
-      const clientResponse = await fetch(`http://localhost:8000/api/clients/${client.id}`);
+      const clientResponse = await fetch(`${API_URL}/clients/${client.id}`);
       if (!clientResponse.ok) {
         throw new Error(`Erreur HTTP: ${clientResponse.status}`);
       }
@@ -975,7 +979,7 @@ const ClientProfile = () => {
     }
     
     try {
-      const response = await fetch(`http://localhost:8000/api/contrats-forfait/${id}`, {
+      const response = await fetch(`${API_URL}/contrats-forfait/${id}`, {
         method: 'DELETE'
       });
       
@@ -987,7 +991,7 @@ const ClientProfile = () => {
       await fetchContracts(client.id);
       
       // Update client data to reflect contract changes
-      const clientResponse = await fetch(`http://localhost:8000/api/clients/${client.id}`);
+      const clientResponse = await fetch(`${API_URL}/clients/${client.id}`);
       if (!clientResponse.ok) {
         throw new Error(`Erreur HTTP: ${clientResponse.status}`);
       }
@@ -1067,7 +1071,7 @@ const ClientProfile = () => {
     }
     
     try {
-      const response = await fetch(`http://localhost:8000/api/versements-forfait/${id}`, {
+      const response = await fetch(`${API_URL}/versements-forfait/${id}`, {
         method: 'DELETE',
       });
       

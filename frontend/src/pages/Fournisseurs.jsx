@@ -20,6 +20,7 @@ import {
   Edit as EditIcon, 
   Delete as DeleteIcon 
 } from '@mui/icons-material';
+import { API_URL } from '../App';
 
 /**
  * Fournisseurs component - Manages suppliers data with CRUD operations
@@ -106,8 +107,7 @@ const Fournisseurs = () => {
   const fetchFournisseurs = async () => {
     setLoading(true);
     try {
-      // Fetch suppliers
-      const response = await fetch('http://localhost:8000/api/fournisseurs');
+      const response = await fetch(`${API_URL}/fournisseurs`);
       const data = await handleApiError(response);
       setFournisseurs(data);
       setError(null);
@@ -126,9 +126,10 @@ const Fournisseurs = () => {
   // Handle adding a new supplier
   const handleAddFournisseur = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
+    
     try {
-      // Send the new supplier to the API
-      const response = await fetch('http://localhost:8000/api/fournisseurs', {
+      const response = await fetch(`${API_URL}/fournisseurs`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -148,9 +149,14 @@ const Fournisseurs = () => {
         adresse: ''
       });
       setIsAddingFournisseur(false);
-      showSnackbar('Fournisseur ajouté avec succès', 'success');
+      
+      // Show success message
+      setSnackbar({ open: true, message: 'Fournisseur ajouté avec succès', severity: 'success' });
     } catch (error) {
-      showSnackbar(error.message || 'Erreur lors de l\'ajout du fournisseur', 'error');
+      console.error('Error adding supplier:', error);
+      setSnackbar({ open: true, message: `Erreur: ${error.message}`, severity: 'error' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -163,9 +169,10 @@ const Fournisseurs = () => {
   // Handle updating a supplier
   const handleUpdateFournisseur = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
+    
     try {
-      // Send the updated supplier to the API
-      const response = await fetch(`http://localhost:8000/api/fournisseurs/${editingFournisseur.id}`, {
+      const response = await fetch(`${API_URL}/fournisseurs/${editingFournisseur.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -180,9 +187,14 @@ const Fournisseurs = () => {
       
       // Close dialog
       setIsEditingFournisseur(false);
-      showSnackbar('Fournisseur modifié avec succès', 'success');
+      
+      // Show success message
+      setSnackbar({ open: true, message: 'Fournisseur modifié avec succès', severity: 'success' });
     } catch (error) {
-      showSnackbar(error.message || 'Erreur lors de la modification du fournisseur', 'error');
+      console.error('Error updating supplier:', error);
+      setSnackbar({ open: true, message: `Erreur: ${error.message}`, severity: 'error' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -194,9 +206,10 @@ const Fournisseurs = () => {
 
   // Handle confirming the deletion
   const handleDeleteConfirm = async () => {
+    setDeleting(true);
+    
     try {
-      // Send the delete request to the API
-      const response = await fetch(`http://localhost:8000/api/fournisseurs/${fournisseurToDelete.id}`, {
+      const response = await fetch(`${API_URL}/fournisseurs/${fournisseurToDelete.id}`, {
         method: 'DELETE',
       });
 
@@ -207,14 +220,13 @@ const Fournisseurs = () => {
       
       // Close dialog and show success message
       setDeleteConfirmOpen(false);
-      showSnackbar('Fournisseur supprimé avec succès', 'success');
+      setSnackbar({ open: true, message: 'Fournisseur supprimé avec succès', severity: 'success' });
     } catch (error) {
-      showSnackbar(error.message || 'Erreur lors de la suppression du fournisseur', 'error');
+      console.error('Error deleting supplier:', error);
+      setSnackbar({ open: true, message: `Erreur: ${error.message}`, severity: 'error' });
+    } finally {
+      setDeleting(false);
     }
-  };
-
-  const showSnackbar = (message, severity) => {
-    setSnackbar({ open: true, message, severity });
   };
 
   const handleCloseSnackbar = () => {

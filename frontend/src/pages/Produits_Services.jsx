@@ -27,6 +27,7 @@ import {
   Edit as EditIcon, 
   Delete as DeleteIcon 
 } from '@mui/icons-material';
+import { API_URL } from '../App';
 
 /**
  * Produits_Services component - Displays tabs for products and services
@@ -153,12 +154,12 @@ const Produits_Services = () => {
     setLoading(true);
     try {
       // Fetch products
-      const productsResponse = await fetch('http://localhost:8000/api/produits');
+      const productsResponse = await fetch(`${API_URL}/produits`);
       const productsData = await handleApiError(productsResponse);
       setProducts(productsData);
 
       // Fetch services
-      const servicesResponse = await fetch('http://localhost:8000/api/services');
+      const servicesResponse = await fetch(`${API_URL}/services`);
       const servicesData = await handleApiError(servicesResponse);
       setServices(servicesData);
 
@@ -184,7 +185,7 @@ const Produits_Services = () => {
     e.preventDefault();
     try {
       // Send the new service to the API
-      const response = await fetch('http://localhost:8000/api/services', {
+      const response = await fetch(`${API_URL}/services`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -203,9 +204,20 @@ const Produits_Services = () => {
         incineration: 'Non'
       });
       setIsAddingService(false);
-      showSnackbar('Service ajouté avec succès', 'success');
+      
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: 'Service ajouté avec succès',
+        severity: 'success'
+      });
     } catch (error) {
-      showSnackbar(error.message || 'Erreur lors de l\'ajout du service', 'error');
+      console.error('Error adding service:', error);
+      setSnackbar({
+        open: true,
+        message: `Erreur: ${error.message}`,
+        severity: 'error'
+      });
     }
   };
 
@@ -214,7 +226,7 @@ const Produits_Services = () => {
     e.preventDefault();
     try {
       // Send the new product to the API
-      const response = await fetch('http://localhost:8000/api/produits', {
+      const response = await fetch(`${API_URL}/produits`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -232,9 +244,20 @@ const Produits_Services = () => {
         designation: ''
       });
       setIsAddingProduct(false);
-      showSnackbar('Produit ajouté avec succès', 'success');
+      
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: 'Produit ajouté avec succès',
+        severity: 'success'
+      });
     } catch (error) {
-      showSnackbar(error.message || 'Erreur lors de l\'ajout du produit', 'error');
+      console.error('Error adding product:', error);
+      setSnackbar({
+        open: true,
+        message: `Erreur: ${error.message}`,
+        severity: 'error'
+      });
     }
   };
 
@@ -255,7 +278,7 @@ const Produits_Services = () => {
     e.preventDefault();
     try {
       // Send the updated product to the API
-      const response = await fetch(`http://localhost:8000/api/produits/${editingProduct.id}`, {
+      const response = await fetch(`${API_URL}/produits/${editingProduct.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -281,7 +304,7 @@ const Produits_Services = () => {
     e.preventDefault();
     try {
       // Send the updated service to the API
-      const response = await fetch(`http://localhost:8000/api/services/${editingService.id}`, {
+      const response = await fetch(`${API_URL}/services/${editingService.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -315,7 +338,7 @@ const Produits_Services = () => {
       const endpoint = type === 'produit' ? 'produits' : 'services';
       
       // Send the delete request to the API
-      const response = await fetch(`http://localhost:8000/api/${endpoint}/${id}`, {
+      const response = await fetch(`${API_URL}/${endpoint}/${id}`, {
         method: 'DELETE',
       });
 

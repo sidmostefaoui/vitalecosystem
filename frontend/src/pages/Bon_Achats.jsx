@@ -36,6 +36,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format } from 'date-fns';
 import fr from 'date-fns/locale/fr';
+import { API_URL } from '../App';
 
 const Bon_Achats = () => {
   const [bonAchats, setBonAchats] = useState([]);
@@ -66,15 +67,18 @@ const Bon_Achats = () => {
   }, []);
 
   const fetchBonAchats = async () => {
+    setLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/bon-achats');
-      if (!response.ok) throw new Error('Erreur lors du chargement des bons d\'achats');
+      const response = await fetch(`${API_URL}/bon-achats`);
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
       const data = await response.json();
       setBonAchats(data);
+      setError(null);
     } catch (error) {
-      console.error('Erreur:', error);
-      showSnackbar('Erreur lors du chargement des bons d\'achats', 'error');
-      setError('Erreur lors du chargement des bons d\'achats');
+      console.error('Error fetching bons achat:', error);
+      setError(`Erreur lors du chargement des bons d'achat: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -82,24 +86,28 @@ const Bon_Achats = () => {
 
   const fetchFournisseurs = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/fournisseurs');
-      if (!response.ok) throw new Error('Erreur lors du chargement des fournisseurs');
+      const response = await fetch(`${API_URL}/fournisseurs`);
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
       const data = await response.json();
       setFournisseurs(data);
     } catch (error) {
-      console.error('Erreur:', error);
+      console.error('Error fetching fournisseurs:', error);
       showSnackbar('Erreur lors du chargement des fournisseurs', 'error');
     }
   };
 
   const fetchProduits = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/produits');
-      if (!response.ok) throw new Error('Erreur lors du chargement des produits');
+      const response = await fetch(`${API_URL}/produits`);
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
       const data = await response.json();
       setProduits(data);
     } catch (error) {
-      console.error('Erreur:', error);
+      console.error('Error fetching produits:', error);
       showSnackbar('Erreur lors du chargement des produits', 'error');
     }
   };
@@ -141,7 +149,7 @@ const Bon_Achats = () => {
 
   const fetchBonAchatProducts = async (bonId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/bon-achats/${bonId}/produits`);
+      const response = await fetch(`${API_URL}/bon-achats/${bonId}/produits`);
       if (!response.ok) throw new Error('Erreur lors du chargement des produits du bon d\'achat');
       const data = await response.json();
       setFormData(prev => ({
@@ -162,7 +170,7 @@ const Bon_Achats = () => {
 
   const fetchBonAchatVersements = async (bonId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/bon-achats/${bonId}/versements`);
+      const response = await fetch(`${API_URL}/bon-achats/${bonId}/versements`);
       if (!response.ok) throw new Error('Erreur lors du chargement des versements du bon d\'achat');
       
       const data = await response.json();
@@ -295,7 +303,7 @@ const Bon_Achats = () => {
         bonId = selectedBon.id;
 
         // Update the existing bon d'achat instead of delete-recreate
-        const updateResponse = await fetch(`http://localhost:8000/api/bon-achats/${bonId}`, {
+        const updateResponse = await fetch(`${API_URL}/bon-achats/${bonId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -306,32 +314,32 @@ const Bon_Achats = () => {
         if (!updateResponse.ok) throw new Error('Erreur lors de la mise à jour du bon d\'achat');
         
         // Get all existing versements
-        const versementsResponse = await fetch(`http://localhost:8000/api/bon-achats/${bonId}/versements`);
+        const versementsResponse = await fetch(`${API_URL}/bon-achats/${bonId}/versements`);
         if (versementsResponse.ok) {
           const existingVersements = await versementsResponse.json();
           
           // Delete all existing versements
           for (const versement of existingVersements) {
-            await fetch(`http://localhost:8000/api/bon-achats/${bonId}/versements/${versement.id}`, {
+            await fetch(`${API_URL}/bon-achats/${bonId}/versements/${versement.id}`, {
               method: 'DELETE',
             });
           }
         }
         
         // Delete all existing products (they will be re-added)
-        const produitsResponse = await fetch(`http://localhost:8000/api/bon-achats/${bonId}/produits`);
+        const produitsResponse = await fetch(`${API_URL}/bon-achats/${bonId}/produits`);
         if (produitsResponse.ok) {
           const existingProduits = await produitsResponse.json();
           
           for (const produit of existingProduits) {
-            await fetch(`http://localhost:8000/api/bon-achats/${bonId}/produits/${produit.id}`, {
+            await fetch(`${API_URL}/bon-achats/${bonId}/produits/${produit.id}`, {
               method: 'DELETE',
             });
           }
         }
       } else {
         // Adding a new bon d'achat
-        const response = await fetch('http://localhost:8000/api/bon-achats', {
+        const response = await fetch(`${API_URL}/bon-achats`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -348,7 +356,7 @@ const Bon_Achats = () => {
       // Save products
       const validProducts = formData.produits.filter(p => p.produit && p.qte);
       for (const product of validProducts) {
-        await fetch(`http://localhost:8000/api/bon-achats/${bonId}/produits`, {
+        await fetch(`${API_URL}/bon-achats/${bonId}/produits`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -371,7 +379,7 @@ const Bon_Achats = () => {
       
       for (const versement of validVersements) {
         try {
-          const versementResponse = await fetch(`http://localhost:8000/api/bon-achats/${bonId}/versements`, {
+          const versementResponse = await fetch(`${API_URL}/bon-achats/${bonId}/versements`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -417,7 +425,7 @@ const Bon_Achats = () => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce bon d\'achat ?')) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/api/bon-achats/${id}`, {
+      const response = await fetch(`${API_URL}/bon-achats/${id}`, {
         method: 'DELETE',
       });
 
